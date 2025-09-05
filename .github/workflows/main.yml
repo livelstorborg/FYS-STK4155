@@ -1,0 +1,32 @@
+name: Code checks
+
+on: [ push, pull_request ]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [project1]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Sync deps (incl. dev)
+        run: uv sync --locked --all-extras
+
+      - name: Ruff format (check only)
+        run: uv run ruff format --check
+
+      - name: Ruff lint
+        run: uv run ruff check . --output-format=github
+
+      - name: Run tests
+        run: uv run pytest -q
