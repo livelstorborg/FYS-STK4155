@@ -1,7 +1,12 @@
 import sys
 
-from project1.utils.print_functions import print_hello
+import numpy as np
+
+from project1.regression import polynomial_features
 
 print(sys.executable)
-print_hello()
-print_hello("August")
+
+x = np.arange(10)
+p = 3
+feats = polynomial_features(x, p)
+assert feats is not None
