@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "pytest-with-coverage",
+			"type": "shell",
+			"command": "uv run -q pytest --maxfail=1 --disable-warnings -q --cov=project1 --cov-report=term-missing",
+			"isBackground": false,
+			"group": "test"
+		}
+	]
+}

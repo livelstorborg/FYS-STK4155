@@ -23,14 +23,10 @@ def polynomial_features(x: np.ndarray, p: int, intercept: bool = False) -> np.nd
     """
     n = len(x)
 
-    if intercept:
-        X = np.zeros((n, p + 1))
-        X[:, 0] = 1
-        for i in range(1, p + 1):
-            X[:, i] = x**i
-        return X
-    else:
-        X = np.zeros((n, p))
-        for i in range(p):
-            X[:, i] = x ** (i + 1)
-        return X
+    offset = 1 if intercept else 0
+    X = np.ones((n, p + offset))
+
+    for i in range(offset, p + offset):
+        X[:, i] = x ** (i + 1 - offset)
+
+    return X

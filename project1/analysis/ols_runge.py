@@ -1,10 +1,8 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from src.project1.regression.features import polynomial_features
-from src.project1.regression.functions import runge
-from src.project1.regression.ols import OLS_parameters
-from src.project1.utils.error_analysis_functions import mse, r_squared
+from project1.regression import OLS_parameters, polynomial_features, runge
+from project1.utils.error_analysis import mse, r_squared
 
 x = np.linspace(-1, 1, 1000)
 
