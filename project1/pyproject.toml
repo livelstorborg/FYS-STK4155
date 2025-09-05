@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Henrik Haug", email = "heh@ulrik.uio.no" }
+    { name = "Henrik Haug", email = "heh@uio.no" }
 ]
 requires-python = ">=3.11"
 dependencies = [
