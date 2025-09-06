@@ -8,7 +8,7 @@ x = np.linspace(-1, 1, 1000)
 
 for i in range(1, 15 + 1):
     X = polynomial_features(x, i)
-    y = runge(x)
+    y = runge(x) * np.random.normal(0, 0.1)
 
     # scaling data
     X_mean = X.mean(axis=0)
