@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from project1.regression import OLS_parameters, polynomial_features, runge
 from project1.utils.error_analysis import mse, r_squared
-from project1.utils.plot import plot_error
+from project1.utils.plot import plot
 
 x = np.linspace(-1, 1, 1000)
 y = runge(x) + np.random.normal(0, 0.1, size=x.shape)
@@ -50,6 +50,7 @@ def one_iter(x, i):
         "MSE_test": mse_ols_test,
         "R2_train": r2_ols_train,
         "R2_test": r2_ols_test,
+        "theta": theta_ols,
     }
 
 
@@ -64,12 +65,9 @@ except KeyboardInterrupt:
 
 df = pd.DataFrame(results)
 
-print("\n=== Error metrics by polynomial degree ===")
-print(df.round(4).to_string(index=False))
-
 # Use DataFrame columns for plotting and provide labels
 # One figure for MSE
-plot_error(
+plot(
     df["Degree"],
     {"MSE (train)": df["MSE_train"], "MSE (test)": df["MSE_test"]},
     ylabel="MSE",
@@ -79,7 +77,7 @@ plot_error(
 plt.show()
 
 # One figure for R^2
-plot_error(
+plot(
     df["Degree"],
     {r"$R^2$ (train)": df["R2_train"], r"$R^2$ (test)": df["R2_test"]},
     ylabel=r"$R^2$",
