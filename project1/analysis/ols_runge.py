@@ -30,12 +30,12 @@ for i in range(1, 15 + 1):
     y_pred_test = X_test @ theta_ols
 
     # Calculate MSE
-    mse_ols_train = mse(X_train, y_pred_train, theta_ols)
-    mse_ols_test = mse(X_test, y_pred_test, theta_ols)
+    mse_ols_train = mse(X_train, y_train, theta_ols)
+    mse_ols_test = mse(X_test, y_test, theta_ols)
 
     # Calculate R^2
     r2_ols_train = r_squared(y_train, y_pred_train)
     r2_ols_test = r_squared(y_test, y_pred_test)
 
     # plot
-    print(mse_ols_train, mse_ols_train, r2_ols_train, r2_ols_test)
+    print(mse_ols_train, mse_ols_test, r2_ols_train, r2_ols_test)
