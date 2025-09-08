@@ -43,3 +43,41 @@ def plot(
         fig.savefig(filename, dpi=300, bbox_inches="tight")
 
     return fig
+
+
+def plot_error(
+    x,
+    series: dict,
+    *,
+    xlabel: str = "Polynomial Degree",
+    ylabel: str | None = None,
+    figsize: tuple[float, float] | None = (6, 4),
+    filename: str | None = None,
+):
+    """Plot multiple series on one figure.
+
+    Parameters
+    ----------
+    x : array-like
+        Shared x-values.
+    series : dict[label, y-array]
+        Mapping from legend label to y-values to plot.
+    xlabel, ylabel : str, optional
+        Axis labels.
+    figsize : tuple, optional
+        Figure size.
+    filename : str | None, optional
+        If provided, save the figure to this path.
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    x_arr = np.asarray(x)
+    for label, y in series.items():
+        ax.plot(x_arr, np.asarray(y), marker="o", label=label)
+    ax.grid(True)
+    ax.set_xlabel(xlabel)
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
+    ax.legend()
+    if filename:
+        fig.savefig(filename, bbox_inches="tight")
+    return ax

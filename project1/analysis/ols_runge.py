@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from project1.regression import OLS_parameters, polynomial_features, runge
+from project1.regression import OLS, polynomial_features, runge
 from project1.utils.error_analysis import mse, r_squared
 from project1.utils.plot import plot
 
@@ -31,10 +31,12 @@ def one_iter(x, i):
         X_norm, y_centered, test_size=0.2
     )
 
-    # Perform OLS regression
-    theta_ols = OLS_parameters(X_train, y_train)
-    y_pred_train = X_train @ theta_ols
-    y_pred_test = X_test @ theta_ols
+    # Perform OLS regression using class API
+    model = OLS()
+    model.fit(X_train, y_train)
+    theta_ols = model.theta_
+    y_pred_train = model.predict(X_train)
+    y_pred_test = model.predict(X_test)
 
     # Calculate MSE
     mse_ols_train = mse(X_train, y_train, theta_ols)
