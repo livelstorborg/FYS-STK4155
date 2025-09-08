@@ -52,12 +52,12 @@ def one_iter(x, i):
         "MSE_test": mse_ols_test,
         "R2_train": r2_ols_train,
         "R2_test": r2_ols_test,
-        "theta": theta_ols,
+        "Theta": theta_ols,
     }
 
 
 try:
-    n_poly = 20
+    n_poly = 15
     for i in tqdm(range(1, n_poly + 1)):
         result = one_iter(x, i)
         results.append(result)
@@ -85,5 +85,48 @@ plot(
     ylabel=r"$R^2$",
     figsize=(8, 6),
     filename="figs/deg_vs_R2_OLS.pdf",
+)
+plt.show()
+
+# Convert the Series of arrays into a list of arrays
+theta_list = df["Theta"].to_list()
+
+# Find the maximum polynomial degree (= max length of theta arrays)
+max_degree = max(len(t) for t in theta_list)
+
+# Prepare a dictionary to hold each theta component over all degrees
+theta_dict = {}
+
+for i in range(max_degree):
+    # Collect the i-th component for all degrees where it exists
+    theta_dict[f"theta_{i + 1}"] = [t[i] if i < len(t) else np.nan for t in theta_list]
+# Plot all theta components vs polynomial degree
+
+print()
+plot(
+    df["Degree"],
+    theta_dict,
+    ylabel="Theta components",
+    figsize=(10, 6),
+    filename="figs/deg_vs_theta_components.pdf",
+)
+plt.show()
+
+# Keep only degrees up to 15
+df_subset = df[df["Degree"] <= 15]
+
+# Convert the Series of arrays into a list of arrays
+theta_list = df_subset["Theta"].to_list()
+
+# Collect only the last theta component
+theta_last = [t[-1] for t in theta_list]  # t[-1] is the last component
+
+# Plot degree vs last theta component
+plot(
+    df_subset["Degree"],
+    {"theta_last": theta_last},
+    ylabel="Theta (last component)",
+    figsize=(8, 6),
+    filename="figs/deg_vs_theta_last.pdf",
 )
 plt.show()
