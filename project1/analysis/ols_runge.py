@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -5,6 +6,7 @@ from tqdm import tqdm
 
 from project1.regression import OLS_parameters, polynomial_features, runge
 from project1.utils.error_analysis import mse, r_squared
+from project1.utils.plot import plot_error
 
 x = np.linspace(-1, 1, 1000)
 y = runge(x) + np.random.normal(0, 0.1, size=x.shape)
@@ -44,15 +46,15 @@ def one_iter(x, i):
 
     return {
         "Degree": i,
-        "MSE train": mse_ols_train,
-        "MSE test": mse_ols_test,
-        "R2 train": r2_ols_train,
-        "R2 test": r2_ols_test,
+        "MSE_train": mse_ols_train,
+        "MSE_test": mse_ols_test,
+        "R2_train": r2_ols_train,
+        "R2_test": r2_ols_test,
     }
 
 
 try:
-    n_poly = 15
+    n_poly = 20
     for i in tqdm(range(1, n_poly + 1)):
         result = one_iter(x, i)
         results.append(result)
@@ -64,3 +66,24 @@ df = pd.DataFrame(results)
 
 print("\n=== Error metrics by polynomial degree ===")
 print(df.round(4).to_string(index=False))
+
+# Use DataFrame columns for plotting and provide labels
+# One figure for MSE
+plot_error(
+    df["Degree"],
+    {"MSE (train)": df["MSE_train"], "MSE (test)": df["MSE_test"]},
+    ylabel="MSE",
+    figsize=(8, 6),
+    filename="figs/deg_vs_MSE_OLS.pdf",
+)
+plt.show()
+
+# One figure for R^2
+plot_error(
+    df["Degree"],
+    {r"$R^2$ (train)": df["R2_train"], r"$R^2$ (test)": df["R2_test"]},
+    ylabel=r"$R^2$",
+    figsize=(8, 6),
+    filename="figs/deg_vs_R2_OLS.pdf",
+)
+plt.show()
