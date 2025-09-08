@@ -1,14 +1,19 @@
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 
 from project1.regression import OLS_parameters, polynomial_features, runge
 from project1.utils.error_analysis import mse, r_squared
 
 x = np.linspace(-1, 1, 1000)
+y = runge(x) + np.random.normal(0, 0.1, size=x.shape)
 
-for i in range(1, 15 + 1):
+results = []
+
+
+def one_iter(x, i):
     X = polynomial_features(x, i)
-    y = runge(x) * np.random.normal(0, 0.1)
 
     # scaling data
     X_mean = X.mean(axis=0)
@@ -37,5 +42,25 @@ for i in range(1, 15 + 1):
     r2_ols_train = r_squared(y_train, y_pred_train)
     r2_ols_test = r_squared(y_test, y_pred_test)
 
-    # plot
-    print(mse_ols_train, mse_ols_test, r2_ols_train, r2_ols_test)
+    return {
+        "Degree": i,
+        "MSE train": mse_ols_train,
+        "MSE test": mse_ols_test,
+        "R2 train": r2_ols_train,
+        "R2 test": r2_ols_test,
+    }
+
+
+try:
+    n_poly = 15
+    for i in tqdm(range(1, n_poly + 1)):
+        result = one_iter(x, i)
+        results.append(result)
+except KeyboardInterrupt:
+    pass
+
+
+df = pd.DataFrame(results)
+
+print("\n=== Error metrics by polynomial degree ===")
+print(df.round(4).to_string(index=False))
