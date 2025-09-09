@@ -64,3 +64,9 @@ def gradient_descent_ols(
     X: np.ndarray, y: np.ndarray, eta: float, n_iter: int
 ) -> np.ndarray:
     return OLS.gradient_descent(X, y, eta=eta, n_iter=n_iter)
+
+
+
+
+
+
