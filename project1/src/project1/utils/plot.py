@@ -7,7 +7,7 @@ def plot(
     error_dict,
     *,
     ylabel: str = "Error",
-    figsize: tuple[int, int] = (8, 5),
+    figsize: tuple[int, int] = (8, 6),
     filename: str | None = None,
 ):
     """Plot error vs polynomial degree for multiple series on one figure.
@@ -36,8 +36,8 @@ def plot(
     ax.grid(True)
     ax.set_xlabel("Polynomial Degree", fontsize=16)
     ax.set_ylabel(ylabel, fontsize=16)
-    ax.tick_params(axis="both", labelsize=14)
-    ax.legend()
+    ax.tick_params(axis="both", labelsize=16)
+    ax.legend(fontsize=16)
 
     if filename:
         fig.savefig(filename, dpi=300, bbox_inches="tight")
