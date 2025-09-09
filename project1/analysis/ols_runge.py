@@ -8,13 +8,12 @@ from project1.regression import OLS, polynomial_features, runge
 from project1.utils.error_analysis import mse, r_squared
 from project1.utils.plot import plot
 
-x = np.linspace(-1, 1, 1000)
-y = runge(x) + np.random.normal(0, 0.1, size=x.shape)
-
-results = []
 
 
 def one_iter(x, i):
+    
+    y = runge(x) + np.random.normal(0, 0.1, size=x.shape)
+    
     X = polynomial_features(x, i)
 
     # scaling data
@@ -31,7 +30,7 @@ def one_iter(x, i):
         X_norm, y_centered, test_size=0.2
     )
 
-    # Perform OLS regression using class API
+    # Perform OLS regression 
     model = OLS()
     model.fit(X_train, y_train)
     theta_ols = model.theta_
@@ -56,6 +55,10 @@ def one_iter(x, i):
     }
 
 
+
+x = np.linspace(-1, 1, 1000)
+results = []
+
 try:
     n_poly = 15
     for i in tqdm(range(1, n_poly + 1)):
@@ -64,69 +67,78 @@ try:
 except KeyboardInterrupt:
     pass
 
-
 df = pd.DataFrame(results)
 
-# Use DataFrame columns for plotting and provide labels
-# One figure for MSE
+# Plot for MSE
 plot(
     df["Degree"],
     {"MSE (train)": df["MSE_train"], "MSE (test)": df["MSE_test"]},
     ylabel="MSE",
     figsize=(8, 6),
-    filename="figs/deg_vs_MSE_OLS.pdf",
+    filename="../figs/deg_vs_MSE_OLS.pdf",
 )
 plt.show()
 
-# One figure for R^2
+# Plot for R^2
 plot(
     df["Degree"],
     {r"$R^2$ (train)": df["R2_train"], r"$R^2$ (test)": df["R2_test"]},
     ylabel=r"$R^2$",
     figsize=(8, 6),
-    filename="figs/deg_vs_R2_OLS.pdf",
+    filename="../figs/deg_vs_R2_OLS.pdf",
 )
 plt.show()
 
-# Convert the Series of arrays into a list of arrays
-theta_list = df["Theta"].to_list()
 
-# Find the maximum polynomial degree (= max length of theta arrays)
-max_degree = max(len(t) for t in theta_list)
-
-# Prepare a dictionary to hold each theta component over all degrees
-theta_dict = {}
-
-for i in range(max_degree):
-    # Collect the i-th component for all degrees where it exists
-    theta_dict[f"theta_{i + 1}"] = [t[i] if i < len(t) else np.nan for t in theta_list]
-# Plot all theta components vs polynomial degree
-
-print()
-plot(
-    df["Degree"],
-    theta_dict,
-    ylabel="Theta components",
-    figsize=(10, 6),
-    filename="figs/deg_vs_theta_components.pdf",
-)
-plt.show()
-
-# Keep only degrees up to 15
 df_subset = df[df["Degree"] <= 15]
 
 # Convert the Series of arrays into a list of arrays
 theta_list = df_subset["Theta"].to_list()
 
-# Collect only the last theta component
-theta_last = [t[-1] for t in theta_list]  # t[-1] is the last component
+# Find the maximum degree to determine how many theta components we have
+max_degree = max(len(t) for t in theta_list)
 
-# Plot degree vs last theta component
+# Create dictionary to store all theta components 
+theta_dict = {}
+for i in range(max_degree):
+    theta_dict[f"theta_{i + 1}"] = [t[i] if i < len(t) else np.nan for t in theta_list]
+
+# Plot for evolution of theta_1
 plot(
     df_subset["Degree"],
-    {"theta_last": theta_last},
-    ylabel="Theta (last component)",
+    {r"$\theta_1$": theta_dict["theta_1"]},  # Use LaTeX formatting for legend
+    ylabel=r"Evolution of $\theta_1$", 
     figsize=(8, 6),
-    filename="figs/deg_vs_theta_last.pdf",
+    filename="../figs/deg_vs_theta1.pdf",
 )
+plt.show()
+
+# Analysis: Dependence on the number of data points and the polynomial degree
+n_points_list = [50, 500, 1000, 10000, 1000000]
+dependence_results = []
+
+for n_points in tqdm(n_points_list, desc="Data points"):
+    
+    x_dep = np.linspace(-1, 1, n_points)
+    for degree in range(1, 16):
+        result = one_iter(x_dep, degree)
+        result["N_points"] = n_points  # Add the data points info
+        dependence_results.append(result)
+
+df_dependence = pd.DataFrame(dependence_results)
+
+# Plot: MSE vs polynomial degree for different numbers of data points
+mse_vs_degree = {}
+for n_points in n_points_list:
+    subset = df_dependence[df_dependence["N_points"] == n_points]
+    mse_vs_degree[f"N = {n_points}"] = subset["MSE_test"].values
+
+plot(
+    list(range(1, 16)),
+    mse_vs_degree,
+    ylabel="MSE",
+    figsize=(8, 6),
+    filename="../figs/mse_vs_degree_datapoints.pdf",
+)
+# plt.yscale('log')
 plt.show()
