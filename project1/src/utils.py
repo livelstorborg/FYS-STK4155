@@ -35,19 +35,17 @@ def polynomial_features(x: np.ndarray, p: int, intercept: bool = False) -> np.nd
     return X
 
 
-def scale_data(X, y):
-    """Standardize the feature matrix X and center the target vector y."""
-    X_mean = np.mean(X, axis=0)
-    X_std = np.std(X, axis=0)
-
-    # Avoid division by zero - add small epsilon to std
-    X_std = np.where(X_std < 1e-8, 1.0, X_std)
+def scale_data(X, y, X_mean=None, X_std=None, y_mean=None):
+    if X_mean is None:  # Training mode
+        X_mean = np.mean(X, axis=0)
+        X_std = np.std(X, axis=0)
+        X_std = np.where(X_std < 1e-8, 1.0, X_std)
+        y_mean = np.mean(y)
+    
     X_norm = (X - X_mean) / X_std
-
-    y_mean = np.mean(y)
     y_centered = y - y_mean
-
-    return X_norm, y_centered, y_mean
+    
+    return X_norm, y_centered, X_mean, X_std, y_mean
 
 
 def Ridge_parameters(X, y, lam):
