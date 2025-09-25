@@ -30,32 +30,27 @@ analysis = RegressionAnalysis(
 )
 
 # Fit all methods
-analysis.fit_analytical()
-analysis.fit_gradient_descent()
-analysis.fit_momentum()
-analysis.fit_adagrad()
-analysis.fit_rmsprop()
-analysis.fit_adam()
-analysis.predict()
+analysis.fit_many(models=('ols', 'ridge'), 
+                  opts=('analytical', 'gd', 'momentum', 'adagrad', 'rmsprop', 'adam'))
 
-# Use the class properties directly - no manual calculations needed!
+# Get predictions - the new class stores these automatically
 solutions_ols = [
-    analysis.y_pred_ols_analytical,
-    analysis.y_pred_ols_gd,
-    analysis.y_pred_ols_momentum,
-    analysis.y_pred_ols_adagrad,
-    analysis.y_pred_ols_rmsprop,
-    analysis.y_pred_ols_adam,
+    analysis.runs[('ols', 'analytical')]['y_pred_test'],
+    analysis.runs[('ols', 'gd')]['y_pred_test'], 
+    analysis.runs[('ols', 'momentum')]['y_pred_test'],
+    analysis.runs[('ols', 'adagrad')]['y_pred_test'],
+    analysis.runs[('ols', 'rmsprop')]['y_pred_test'],
+    analysis.runs[('ols', 'adam')]['y_pred_test'],
     y_true,
 ]
 
 solutions_ridge = [
-    analysis.y_pred_ridge_analytical,
-    analysis.y_pred_ridge_gd,
-    analysis.y_pred_ridge_momentum,
-    analysis.y_pred_ridge_adagrad,
-    analysis.y_pred_ridge_rmsprop,
-    analysis.y_pred_ridge_adam,
+    analysis.runs[('ridge', 'analytical')]['y_pred_test'],
+    analysis.runs[('ridge', 'gd')]['y_pred_test'],
+    analysis.runs[('ridge', 'momentum')]['y_pred_test'], 
+    analysis.runs[('ridge', 'adagrad')]['y_pred_test'],
+    analysis.runs[('ridge', 'rmsprop')]['y_pred_test'],
+    analysis.runs[('ridge', 'adam')]['y_pred_test'],
     y_true,
 ]
 
