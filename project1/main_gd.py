@@ -1,8 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
-from src.plotting import *
+from src.plotting import solution_comparison
 from src.regression import RegressionAnalysis
 from src.utils import polynomial_features, scale_data, runge
 

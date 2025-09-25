@@ -50,7 +50,7 @@ def mse_degree_ols(results_dict, sample_size):
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"MSE, N = {sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.savefig(f"figs/mse_vs_degree_ols.pdf")
+    plt.savefig("figs/mse_vs_degree_ols.pdf")
     plt.show()
 
 
@@ -85,7 +85,7 @@ def r2_degree_ols(results, sample_size):
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"R², N = {sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.savefig(f"figs/r2_vs_degree_ols.pdf")
+    plt.savefig("figs/r2_vs_degree_ols.pdf")
     plt.show()
 
 
@@ -107,7 +107,7 @@ def theta_evolution_ols(degrees, theta1_evolution, sample_size):
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"Evolution of $\\theta_1$, N = {sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.savefig(f"figs/theta1_vs_degree_ols.pdf")
+    plt.savefig("figs/theta1_vs_degree_ols.pdf")
     plt.show()
 
 

@@ -1,8 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
-from src.plotting import *
+from src.plotting import (
+    mse_degree_ols,
+    r2_degree_ols,
+    theta_evolution_ols,
+    mse_degree_multiple,
+)
 from src.regression import RegressionAnalysis
 from src.utils import polynomial_features, scale_data, runge
 

@@ -1,4 +1,3 @@
-import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
 from .utils import Ridge_parameters, OLS_parameters, gd_OLS, gd_Ridge
 
