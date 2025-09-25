@@ -1,5 +1,12 @@
 from sklearn.metrics import mean_squared_error, r2_score
-from .utils import Ridge_parameters, OLS_parameters, gd_OLS, gd_Ridge
+from .utils import (
+    analytical_solution,
+    gradient_descent,
+    gd_momentum,
+    gd_adagrad,
+    gd_rmsprop,
+    gd_adam,
+)
 from typing import Optional, Dict, Any
 import numpy as np
 
@@ -74,13 +81,15 @@ class RegressionAnalysis:
     def fit_analytical(self):
         """Fit analytical solutions"""
         # OLS
-        theta_ols = OLS_parameters(self.X_train, self.y_train)
+        theta_ols = analytical_solution(self.X_train, self.y_train, method="ols")
         self._store_result("theta_ols_analytical", theta_ols)
         self._fitted_methods.add("ols_analytical")
 
         # Ridge (if lambda provided)
         if self.lam is not None and self.lam > 0:
-            theta_ridge = Ridge_parameters(self.X_train, self.y_train, self.lam)
+            theta_ridge = analytical_solution(
+                self.X_train, self.y_train, method="ridge", lam=self.lam
+            )
             self._store_result("theta_ridge_analytical", theta_ridge)
             self._fitted_methods.add("ridge_analytical")
 
@@ -90,8 +99,8 @@ class RegressionAnalysis:
             raise ValueError("eta and num_iters required for gradient descent")
 
         # OLS GD
-        theta_ols_gd, history_ols = gd_OLS(
-            self.X_train, self.y_train, self.eta, self.num_iters
+        theta_ols_gd, history_ols = gradient_descent(
+            self.X_train, self.y_train, self.eta, self.num_iters, method="ols"
         )
         self._store_result("theta_ols_gd", theta_ols_gd)
         self._store_result("ols_mse_history", history_ols)
@@ -99,25 +108,234 @@ class RegressionAnalysis:
 
         # Ridge GD (if lambda provided)
         if self.lam is not None and self.lam > 0:
-            theta_ridge_gd, history_ridge = gd_Ridge(
-                self.X_train, self.y_train, self.eta, self.lam, self.num_iters
+            theta_ridge_gd, history_ridge = gradient_descent(
+                self.X_train,
+                self.y_train,
+                self.eta,
+                self.num_iters,
+                method="ridge",
+                lam=self.lam,
             )
             self._store_result("theta_ridge_gd", theta_ridge_gd)
             self._store_result("ridge_mse_history", history_ridge)
             self._fitted_methods.add("ridge_gd")
 
     def fit_lasso(self):
-        """Fit Lasso regression (placeholder for now)"""
+        """Fit Lasso regression using Proximal Gradient Descent (ISTA)"""
         if self.eta is None or self.num_iters is None or self.lam is None:
             raise ValueError("eta, num_iters, and lam required for Lasso")
 
-        # TODO: Implement actual Lasso GD. For now, using Ridge as placeholder
-        theta_lasso_gd, history_lasso = gd_Ridge(
-            self.X_train, self.y_train, self.eta, self.num_iters, self.lam
+        # Use unified gradient descent function with lasso method
+        theta_lasso_gd, history_lasso = gradient_descent(
+            self.X_train,
+            self.y_train,
+            self.eta,
+            self.num_iters,
+            method="lasso",
+            lam=self.lam,
         )
         self._store_result("theta_lasso_gd", theta_lasso_gd)
         self._store_result("lasso_mse_history", history_lasso)
         self._fitted_methods.add("lasso_gd")
+
+    def fit_momentum(self, beta=0.9):
+        """Fit using momentum-based gradient descent for all methods"""
+        if self.eta is None or self.num_iters is None:
+            raise ValueError("eta and num_iters required for momentum gradient descent")
+
+        # OLS with momentum
+        theta_ols_momentum, history_ols_momentum = gd_momentum(
+            self.X_train,
+            self.y_train,
+            self.eta,
+            self.num_iters,
+            method="ols",
+            beta=beta,
+        )
+        self._store_result("theta_ols_momentum", theta_ols_momentum)
+        self._store_result("ols_momentum_mse_history", history_ols_momentum)
+        self._fitted_methods.add("ols_momentum")
+
+        # Ridge with momentum (if lambda provided)
+        if self.lam is not None and self.lam > 0:
+            theta_ridge_momentum, history_ridge_momentum = gd_momentum(
+                self.X_train,
+                self.y_train,
+                self.eta,
+                self.num_iters,
+                method="ridge",
+                lam=self.lam,
+                beta=beta,
+            )
+            self._store_result("theta_ridge_momentum", theta_ridge_momentum)
+            self._store_result("ridge_momentum_mse_history", history_ridge_momentum)
+            self._fitted_methods.add("ridge_momentum")
+
+        # Lasso with momentum (if lambda provided)
+        if self.lam is not None and self.lam > 0:
+            theta_lasso_momentum, history_lasso_momentum = gd_momentum(
+                self.X_train,
+                self.y_train,
+                self.eta,
+                self.num_iters,
+                method="lasso",
+                lam=self.lam,
+                beta=beta,
+            )
+            self._store_result("theta_lasso_momentum", theta_lasso_momentum)
+            self._store_result("lasso_momentum_mse_history", history_lasso_momentum)
+            self._fitted_methods.add("lasso_momentum")
+
+    def fit_adagrad(self, eps=1e-8):
+        """Fit using AdaGrad for all methods"""
+        if self.eta is None or self.num_iters is None:
+            raise ValueError("eta and num_iters required for AdaGrad")
+
+        # OLS with AdaGrad
+        theta_ols_adagrad, history_ols_adagrad = gd_adagrad(
+            self.X_train, self.y_train, self.eta, self.num_iters, method="ols", eps=eps
+        )
+        self._store_result("theta_ols_adagrad", theta_ols_adagrad)
+        self._store_result("ols_adagrad_mse_history", history_ols_adagrad)
+        self._fitted_methods.add("ols_adagrad")
+
+        # Ridge with AdaGrad (if lambda provided)
+        if self.lam is not None and self.lam > 0:
+            theta_ridge_adagrad, history_ridge_adagrad = gd_adagrad(
+                self.X_train,
+                self.y_train,
+                self.eta,
+                self.num_iters,
+                method="ridge",
+                lam=self.lam,
+                eps=eps,
+            )
+            self._store_result("theta_ridge_adagrad", theta_ridge_adagrad)
+            self._store_result("ridge_adagrad_mse_history", history_ridge_adagrad)
+            self._fitted_methods.add("ridge_adagrad")
+
+        # Lasso with AdaGrad (if lambda provided)
+        if self.lam is not None and self.lam > 0:
+            theta_lasso_adagrad, history_lasso_adagrad = gd_adagrad(
+                self.X_train,
+                self.y_train,
+                self.eta,
+                self.num_iters,
+                method="lasso",
+                lam=self.lam,
+                eps=eps,
+            )
+            self._store_result("theta_lasso_adagrad", theta_lasso_adagrad)
+            self._store_result("lasso_adagrad_mse_history", history_lasso_adagrad)
+            self._fitted_methods.add("lasso_adagrad")
+
+    def fit_rmsprop(self, beta=0.9, eps=1e-8):
+        """Fit using RMSprop for all methods"""
+        if self.eta is None or self.num_iters is None:
+            raise ValueError("eta and num_iters required for RMSprop")
+
+        # OLS with RMSprop
+        theta_ols_rmsprop, history_ols_rmsprop = gd_rmsprop(
+            self.X_train,
+            self.y_train,
+            self.eta,
+            self.num_iters,
+            method="ols",
+            beta=beta,
+            eps=eps,
+        )
+        self._store_result("theta_ols_rmsprop", theta_ols_rmsprop)
+        self._store_result("ols_rmsprop_mse_history", history_ols_rmsprop)
+        self._fitted_methods.add("ols_rmsprop")
+
+        # Ridge with RMSprop (if lambda provided)
+        if self.lam is not None and self.lam > 0:
+            theta_ridge_rmsprop, history_ridge_rmsprop = gd_rmsprop(
+                self.X_train,
+                self.y_train,
+                self.eta,
+                self.num_iters,
+                method="ridge",
+                lam=self.lam,
+                beta=beta,
+                eps=eps,
+            )
+            self._store_result("theta_ridge_rmsprop", theta_ridge_rmsprop)
+            self._store_result("ridge_rmsprop_mse_history", history_ridge_rmsprop)
+            self._fitted_methods.add("ridge_rmsprop")
+
+        # Lasso with RMSprop (if lambda provided)
+        if self.lam is not None and self.lam > 0:
+            theta_lasso_rmsprop, history_lasso_rmsprop = gd_rmsprop(
+                self.X_train,
+                self.y_train,
+                self.eta,
+                self.num_iters,
+                method="lasso",
+                lam=self.lam,
+                beta=beta,
+                eps=eps,
+            )
+            self._store_result("theta_lasso_rmsprop", theta_lasso_rmsprop)
+            self._store_result("lasso_rmsprop_mse_history", history_lasso_rmsprop)
+            self._fitted_methods.add("lasso_rmsprop")
+
+    def fit_adam(self, beta1=0.9, beta2=0.999, eps=1e-8, amsgrad=False):
+        """Fit using Adam optimizer for all methods"""
+        if self.eta is None or self.num_iters is None:
+            raise ValueError("eta and num_iters required for Adam")
+
+        # OLS with Adam
+        theta_ols_adam, history_ols_adam = gd_adam(
+            self.X_train,
+            self.y_train,
+            self.eta,
+            self.num_iters,
+            method="ols",
+            beta1=beta1,
+            beta2=beta2,
+            eps=eps,
+            amsgrad=amsgrad,
+        )
+        self._store_result("theta_ols_adam", theta_ols_adam)
+        self._store_result("ols_adam_mse_history", history_ols_adam)
+        self._fitted_methods.add("ols_adam")
+
+        # Ridge with Adam (if lambda provided)
+        if self.lam is not None and self.lam > 0:
+            theta_ridge_adam, history_ridge_adam = gd_adam(
+                self.X_train,
+                self.y_train,
+                self.eta,
+                self.num_iters,
+                method="ridge",
+                lam=self.lam,
+                beta1=beta1,
+                beta2=beta2,
+                eps=eps,
+                amsgrad=amsgrad,
+            )
+            self._store_result("theta_ridge_adam", theta_ridge_adam)
+            self._store_result("ridge_adam_mse_history", history_ridge_adam)
+            self._fitted_methods.add("ridge_adam")
+
+        # Lasso with Adam (if lambda provided)
+        if self.lam is not None and self.lam > 0:
+            theta_lasso_adam, history_lasso_adam = gd_adam(
+                self.X_train,
+                self.y_train,
+                self.eta,
+                self.num_iters,
+                method="lasso",
+                lam=self.lam,
+                beta1=beta1,
+                beta2=beta2,
+                eps=eps,
+                amsgrad=amsgrad,
+            )
+            self._store_result("theta_lasso_adam", theta_lasso_adam)
+            self._store_result("lasso_adam_mse_history", history_lasso_adam)
+            self._fitted_methods.add("lasso_adam")
 
     def predict(self):
         """Generate predictions for all fitted methods"""
@@ -196,6 +414,55 @@ class RegressionAnalysis:
         if value is not None:
             self._store_result("theta_lasso_gd", value)
             self._fitted_methods.add("lasso_gd")
+
+    # Optimizer theta properties
+    @property
+    def theta_ols_momentum(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ols_momentum")
+
+    @property
+    def theta_ridge_momentum(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ridge_momentum")
+
+    @property
+    def theta_lasso_momentum(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_lasso_momentum")
+
+    @property
+    def theta_ols_adagrad(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ols_adagrad")
+
+    @property
+    def theta_ridge_adagrad(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ridge_adagrad")
+
+    @property
+    def theta_lasso_adagrad(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_lasso_adagrad")
+
+    @property
+    def theta_ols_rmsprop(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ols_rmsprop")
+
+    @property
+    def theta_ridge_rmsprop(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ridge_rmsprop")
+
+    @property
+    def theta_lasso_rmsprop(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_lasso_rmsprop")
+
+    @property
+    def theta_ols_adam(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ols_adam")
+
+    @property
+    def theta_ridge_adam(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ridge_adam")
+
+    @property
+    def theta_lasso_adam(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_lasso_adam")
 
     # Prediction properties
     @property
@@ -314,6 +581,55 @@ class RegressionAnalysis:
     @property
     def lasso_mse_history(self) -> Optional[list]:
         return self._get_result("lasso_mse_history")
+
+    # Optimizer MSE history properties
+    @property
+    def ols_momentum_mse_history(self) -> Optional[list]:
+        return self._get_result("ols_momentum_mse_history")
+
+    @property
+    def ridge_momentum_mse_history(self) -> Optional[list]:
+        return self._get_result("ridge_momentum_mse_history")
+
+    @property
+    def lasso_momentum_mse_history(self) -> Optional[list]:
+        return self._get_result("lasso_momentum_mse_history")
+
+    @property
+    def ols_adagrad_mse_history(self) -> Optional[list]:
+        return self._get_result("ols_adagrad_mse_history")
+
+    @property
+    def ridge_adagrad_mse_history(self) -> Optional[list]:
+        return self._get_result("ridge_adagrad_mse_history")
+
+    @property
+    def lasso_adagrad_mse_history(self) -> Optional[list]:
+        return self._get_result("lasso_adagrad_mse_history")
+
+    @property
+    def ols_rmsprop_mse_history(self) -> Optional[list]:
+        return self._get_result("ols_rmsprop_mse_history")
+
+    @property
+    def ridge_rmsprop_mse_history(self) -> Optional[list]:
+        return self._get_result("ridge_rmsprop_mse_history")
+
+    @property
+    def lasso_rmsprop_mse_history(self) -> Optional[list]:
+        return self._get_result("lasso_rmsprop_mse_history")
+
+    @property
+    def ols_adam_mse_history(self) -> Optional[list]:
+        return self._get_result("ols_adam_mse_history")
+
+    @property
+    def ridge_adam_mse_history(self) -> Optional[list]:
+        return self._get_result("ridge_adam_mse_history")
+
+    @property
+    def lasso_adam_mse_history(self) -> Optional[list]:
+        return self._get_result("lasso_adam_mse_history")
 
     # ================= UTILITY METHODS =================
     def get_train_mse(self, method="ols_analytical") -> float:

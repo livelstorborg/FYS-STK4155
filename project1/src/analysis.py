@@ -2,7 +2,7 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 
 from .utils import polynomial_features, scale_data
-from .regression_clean import RegressionAnalysis
+from .regression import RegressionAnalysis
 
 
 def analyze_mse_vs_degree(x, y, degrees, test_size=0.2, random_state=42, **kwargs):

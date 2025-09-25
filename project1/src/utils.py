@@ -71,57 +71,169 @@ def Ridge_gradient(X, y, theta, lam):
     return gradient
 
 
-# Gradient descent for OLS with fixed learning rate
-def gd_OLS(X, y, eta, num_iters, tol=1e-8):
+def analytical_solution(X, y, method="ols", lam=None):
+    """
+    Unified analytical solution function for OLS and Ridge regression.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Feature matrix of shape (n_samples, n_features)
+    y : np.ndarray
+        Target vector of shape (n_samples,)
+    method : str
+        Regression method: 'ols' or 'ridge'
+    lam : float, optional
+        Regularization parameter (required for ridge)
+
+    Returns
+    -------
+    theta : np.ndarray
+        Fitted parameters
+    """
+    if method.lower() not in ["ols", "ridge"]:
+        raise ValueError("Analytical solution only available for 'ols' and 'ridge'")
+
+    if method.lower() == "ridge" and lam is None:
+        raise ValueError("Ridge regression requires lam parameter")
+
+    if method.lower() == "ols":
+        return OLS_parameters(X, y)
+    elif method.lower() == "ridge":
+        return Ridge_parameters(X, y, lam)
+
+
+def soft_threshold(x, threshold):
+    """
+    Soft thresholding operator for Lasso regression.
+
+    This is the proximal operator for the L1 norm:
+    soft_threshold(x, λ) = sign(x) * max(|x| - λ, 0)
+
+    Parameters
+    ----------
+    x : float or np.ndarray
+        Input value(s)
+    threshold : float
+        Threshold parameter (λ)
+
+    Returns
+    -------
+    float or np.ndarray
+        Soft-thresholded value(s)
+    """
+    return np.sign(x) * np.maximum(np.abs(x) - threshold, 0.0)
+
+
+def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol=1e-8):
+    """
+    Unified gradient descent function for OLS, Ridge, and Lasso regression.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Feature matrix of shape (n_samples, n_features)
+    y : np.ndarray
+        Target vector of shape (n_samples,)
+    eta : float
+        Learning rate
+    num_iters : int
+        Maximum number of iterations
+    method : str
+        Regression method: 'ols', 'ridge', or 'lasso'
+    lam : float, optional
+        Regularization parameter (required for ridge and lasso)
+    tol : float
+        Convergence tolerance
+
+    Returns
+    -------
+    theta : np.ndarray
+        Fitted parameters
+    mse_history : list
+        MSE values at each iteration
+    """
+    if method.lower() not in ["ols", "ridge", "lasso"]:
+        raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
+
+    if method.lower() in ["ridge", "lasso"] and lam is None:
+        raise ValueError(f"{method} regression requires lam parameter")
+
     n_features = X.shape[1]
-    theta_OLS = np.zeros(n_features)
+    theta = np.zeros(n_features)
     mse_history = []
 
     for t in range(num_iters):
         # Calculate prediction and MSE
-        y_pred = X @ theta_OLS
+        y_pred = X @ theta
         mse = mean_squared_error(y, y_pred)
         mse_history.append(mse)
 
-        # Gradient descent step
-        grad_OLS = OLS_gradient(X, y, theta_OLS)
-        step = eta * grad_OLS
-        theta_OLS = theta_OLS - step
+        if method.lower() == "ols":
+            # Standard OLS gradient descent
+            grad = OLS_gradient(X, y, theta)
+            theta_new = theta - eta * grad
 
-        if np.linalg.norm(step) < tol:
+        elif method.lower() == "ridge":
+            # Ridge gradient descent
+            grad = Ridge_gradient(X, y, theta, lam)
+            theta_new = theta - eta * grad
+
+        elif method.lower() == "lasso":
+            # Lasso proximal gradient descent (ISTA)
+            grad_smooth = OLS_gradient(X, y, theta)  # Smooth part gradient
+            theta_temp = theta - eta * grad_smooth
+            theta_new = soft_threshold(theta_temp, eta * lam)  # Proximal step
+
+        # Check convergence
+        step_size = np.linalg.norm(theta_new - theta)
+        theta = theta_new
+
+        if step_size < tol:
             break
 
-    return theta_OLS, mse_history
+    return theta, mse_history
 
 
-# Gradient descent for Ridge with fixed learning rate
-def gd_Ridge(X, y, eta, lam, num_iters, tol=1e-8):
-    n_features = X.shape[1]
-    theta_Ridge = np.zeros(n_features)
-    mse_history = []
-
-    for t in range(num_iters):
-        # Calculate prediction and MSE
-        y_pred = X @ theta_Ridge
-        mse = mean_squared_error(y, y_pred)
-        mse_history.append(mse)
-
-        # Gradient descent step
-        grad_Ridge = Ridge_gradient(X, y, theta_Ridge, lam)
-        step = eta * grad_Ridge
-        theta_Ridge = theta_Ridge - step
-
-        if np.linalg.norm(step) < tol:
-            break
-
-    return theta_Ridge, mse_history
-
-
-def gd_OLS_momentum(X, y, eta=1e-2, num_iters=10_000, beta=0.9, tol=1e-10):
+def gd_momentum(
+    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.9, tol=1e-10
+):
     """
-    Gradient Descent with momentum for OLS.
-    Returns: theta, mse_history
+    Unified Gradient Descent with momentum for OLS, Ridge, and Lasso.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Feature matrix
+    y : np.ndarray
+        Target vector
+    eta : float
+        Learning rate
+    num_iters : int
+        Maximum number of iterations
+    method : str
+        Regression method: 'ols', 'ridge', or 'lasso'
+    lam : float, optional
+        Regularization parameter (required for ridge and lasso)
+    beta : float
+        Momentum parameter
+    tol : float
+        Convergence tolerance
+
+    Returns
+    -------
+    theta : np.ndarray
+        Fitted parameters
+    mse_history : list
+        MSE values at each iteration
     """
+    # Validate inputs
+    if method.lower() not in ["ols", "ridge", "lasso"]:
+        raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
+
+    if method.lower() in ["ridge", "lasso"] and lam is None:
+        raise ValueError(f"{method} regression requires lam parameter")
+
     n_features = X.shape[1]
     theta = np.zeros(n_features)
     v = np.zeros_like(theta)  # velocity
@@ -133,10 +245,108 @@ def gd_OLS_momentum(X, y, eta=1e-2, num_iters=10_000, beta=0.9, tol=1e-10):
         mse = mean_squared_error(y_true=y, y_pred=y_pred)
         mse_history.append(mse)
 
-        # gradient + momentum step
-        grad = OLS_gradient(X, y, theta)
-        v = beta * v + grad
-        theta = theta - eta * v
+        # gradient + momentum step based on method
+        if method.lower() == "ols":
+            grad = OLS_gradient(X, y, theta)
+            v = beta * v + grad
+            theta = theta - eta * v
+
+        elif method.lower() == "ridge":
+            grad = Ridge_gradient(X, y, theta, lam)
+            v = beta * v + grad
+            theta = theta - eta * v
+
+        elif method.lower() == "lasso":
+            # For Lasso, apply momentum to smooth part, then proximal step
+            grad_smooth = OLS_gradient(X, y, theta)
+            v = beta * v + grad_smooth
+            theta_temp = theta - eta * v
+            theta = soft_threshold(theta_temp, eta * lam)
+
+        # early stop (by grad norm)
+        if method.lower() == "lasso":
+            # For Lasso, check convergence on smooth gradient
+            grad_for_check = OLS_gradient(X, y, theta)
+        else:
+            grad_for_check = grad
+
+        if np.linalg.norm(grad_for_check) < tol:
+            break
+
+    return theta, mse_history
+
+
+def gd_adagrad(
+    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, eps=1e-8, tol=1e-10
+):
+    """
+    Unified AdaGrad for OLS, Ridge, and Lasso.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Feature matrix
+    y : np.ndarray
+        Target vector
+    eta : float
+        Learning rate
+    num_iters : int
+        Maximum number of iterations
+    method : str
+        Regression method: 'ols', 'ridge', or 'lasso'
+    lam : float, optional
+        Regularization parameter (required for ridge and lasso)
+    eps : float
+        Small value to prevent division by zero
+    tol : float
+        Convergence tolerance
+
+    Returns
+    -------
+    theta : np.ndarray
+        Fitted parameters
+    mse_history : list
+        MSE values at each iteration
+    """
+    # Validate inputs
+    if method.lower() not in ["ols", "ridge", "lasso"]:
+        raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
+
+    if method.lower() in ["ridge", "lasso"] and lam is None:
+        raise ValueError(f"{method} regression requires lam parameter")
+
+    n_features = X.shape[1]
+    theta = np.zeros(n_features)
+    G = np.zeros(n_features)  # Accumulated squared gradients
+    mse_history = []
+
+    for t in range(num_iters):
+        # predict + MSE
+        y_pred = X @ theta
+        mse = mean_squared_error(y_true=y, y_pred=y_pred)
+        mse_history.append(mse)
+
+        # gradient based on method
+        if method.lower() == "ols":
+            grad = OLS_gradient(X, y, theta)
+
+        elif method.lower() == "ridge":
+            grad = Ridge_gradient(X, y, theta, lam)
+
+        elif method.lower() == "lasso":
+            # For Lasso, apply AdaGrad to smooth part, then proximal step
+            grad = OLS_gradient(X, y, theta)
+
+        # AdaGrad update
+        G += grad**2
+        adapted_grad = grad / (np.sqrt(G) + eps)
+
+        if method.lower() == "lasso":
+            # Apply proximal step for Lasso
+            theta_temp = theta - eta * adapted_grad
+            theta = soft_threshold(theta_temp, eta * lam)
+        else:
+            theta = theta - eta * adapted_grad
 
         # early stop (by grad norm)
         if np.linalg.norm(grad) < tol:
@@ -145,14 +355,58 @@ def gd_OLS_momentum(X, y, eta=1e-2, num_iters=10_000, beta=0.9, tol=1e-10):
     return theta, mse_history
 
 
-def gd_Ridge_momentum(X, y, eta=1e-2, num_iters=10_000, lam=1e-2, beta=0.9, tol=1e-10):
+def gd_rmsprop(
+    X,
+    y,
+    eta=1e-2,
+    num_iters=10_000,
+    method="ols",
+    lam=None,
+    beta=0.9,
+    eps=1e-8,
+    tol=1e-10,
+):
     """
-    Gradient Descent with (classical) momentum for Ridge.
-    Returns: theta, mse_history
+    Unified RMSProp for OLS, Ridge, and Lasso.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Feature matrix
+    y : np.ndarray
+        Target vector
+    eta : float
+        Learning rate
+    num_iters : int
+        Maximum number of iterations
+    method : str
+        Regression method: 'ols', 'ridge', or 'lasso'
+    lam : float, optional
+        Regularization parameter (required for ridge and lasso)
+    beta : float
+        Decay rate for moving average of squared gradients
+    eps : float
+        Small value to prevent division by zero
+    tol : float
+        Convergence tolerance
+
+    Returns
+    -------
+    theta : np.ndarray
+        Fitted parameters
+    mse_history : list
+        MSE values at each iteration
     """
+    # Validate inputs
+    if method.lower() not in ["ols", "ridge", "lasso"]:
+        raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
+
+    if method.lower() in ["ridge", "lasso"] and lam is None:
+        raise ValueError(f"{method} regression requires lam parameter")
+
     n_features = X.shape[1]
     theta = np.zeros(n_features)
-    v = np.zeros_like(theta)  # velocity
+    S = np.zeros(n_features)  # EMA of squared gradients
     mse_history = []
 
     for t in range(num_iters):
@@ -161,157 +415,42 @@ def gd_Ridge_momentum(X, y, eta=1e-2, num_iters=10_000, lam=1e-2, beta=0.9, tol=
         mse = mean_squared_error(y_true=y, y_pred=y_pred)
         mse_history.append(mse)
 
-        # gradient + momentum step
-        grad = Ridge_gradient(X, y, theta, lam)
-        v = beta * v + grad
-        theta = theta - eta * v
+        # gradient based on method
+        if method.lower() == "ols":
+            grad = OLS_gradient(X, y, theta)
 
-        if np.linalg.norm(grad) < tol:
-            break
+        elif method.lower() == "ridge":
+            grad = Ridge_gradient(X, y, theta, lam)
 
-    return theta, mse_history
+        elif method.lower() == "lasso":
+            # For Lasso, apply RMSProp to smooth part, then proximal step
+            grad = OLS_gradient(X, y, theta)
 
-
-def gd_OLS_adagrad(X, y, eta=1e-2, num_iters=10_000, eps=1e-8, tol=1e-10):
-    """
-    Adagrad for OLS.
-    Returns: theta, mse_history
-    """
-    n, d = X.shape
-    theta = np.zeros(d)
-    G = np.zeros(d)
-    mse_history = []
-
-    for _ in range(num_iters):
-        r = X @ theta - y
-        mse_history.append(np.mean(r**2))
-
-        # gradient: (2/n) X^T (Xθ - y)
-        grad = (2.0 / n) * (X.T @ r)
-
-        # Adagrad scaling
-        G += grad**2
-        scaled_grad = grad / (np.sqrt(G) + eps)
-
-        theta -= eta * scaled_grad
-
-        if np.linalg.norm(grad) < tol:
-            break
-
-    return theta, mse_history
-
-
-def gd_Ridge_adagrad(
-    X,
-    y,
-    eta=1e-2,
-    num_iters=10_000,
-    lam=1e-2,
-    eps=1e-8,
-    tol=1e-10,
-    regularize_bias=False,
-):
-    """
-    Adagrad for Ridge.
-    Returns: theta, mse_history
-    """
-    n, d = X.shape
-    theta = np.zeros(d)
-    G = np.zeros(d)
-    mse_history = []
-
-    for _ in range(num_iters):
-        r = X @ theta - y
-        mse_history.append(np.mean(r**2))
-
-        # ridge gradient: (2/n) X^T (Xθ - y) + 2λθ (optionally skip bias)
-        grad = (2.0 / n) * (X.T @ r) + 2.0 * lam * theta
-        if not regularize_bias:
-            grad = grad.copy()
-            grad[0] -= 2.0 * lam * theta[0]
-
-        G += grad**2
-        scaled_grad = grad / (np.sqrt(G) + eps)
-
-        theta -= eta * scaled_grad
-
-        if np.linalg.norm(grad) < tol:
-            break
-
-    return theta, mse_history
-
-
-def gd_OLS_rmsprop(X, y, eta=1e-2, num_iters=10_000, beta=0.9, eps=1e-8, tol=1e-10):
-    """
-    RMSProp for OLS.
-    Returns: theta, mse_history
-    """
-    n, d = X.shape
-    theta = np.zeros(d)
-    S = np.zeros(d)  # EMA of squared gradients
-    mse_history = []
-
-    for t in range(num_iters):
-        r = X @ theta - y
-        mse_history.append(np.mean(r**2))
-
-        # gradient: (2/n) X^T (Xθ - y)
-        grad = (2.0 / n) * (X.T @ r)
-
-        # RMSProp accumulator and update
+        # RMSProp update
         S = beta * S + (1.0 - beta) * (grad**2)
-        theta -= eta * grad / (np.sqrt(S) + eps)
+        adapted_grad = grad / (np.sqrt(S) + eps)
 
+        if method.lower() == "lasso":
+            # Apply proximal step for Lasso
+            theta_temp = theta - eta * adapted_grad
+            theta = soft_threshold(theta_temp, eta * lam)
+        else:
+            theta = theta - eta * adapted_grad
+
+        # early stop (by grad norm)
         if np.linalg.norm(grad) < tol:
             break
 
     return theta, mse_history
 
 
-def gd_Ridge_rmsprop(
+def gd_adam(
     X,
     y,
     eta=1e-2,
     num_iters=10_000,
-    lam=1e-2,
-    beta=0.9,
-    eps=1e-8,
-    tol=1e-10,
-    regularize_bias=False,
-):
-    """
-    RMSProp for Ridge.
-    Returns: theta, mse_history
-    """
-    n, d = X.shape
-    theta = np.zeros(d)
-    S = np.zeros(d)  # EMA of squared gradients
-    mse_history = []
-
-    for t in range(num_iters):
-        r = X @ theta - y
-        mse_history.append(np.mean(r**2))
-
-        # ridge gradient: (2/n) X^T (Xθ - y) + 2λθ (optionally skip bias)
-        grad = (2.0 / n) * (X.T @ r) + 2.0 * lam * theta
-        if not regularize_bias:
-            grad = grad.copy()
-            grad[0] -= 2.0 * lam * theta[0]
-
-        S = beta * S + (1.0 - beta) * (grad**2)
-        theta -= eta * grad / (np.sqrt(S) + eps)
-
-        if np.linalg.norm(grad) < tol:
-            break
-
-    return theta, mse_history
-
-
-def gd_OLS_adam(
-    X,
-    y,
-    eta=1e-2,
-    num_iters=10_000,
+    method="ols",
+    lam=None,
     beta1=0.9,
     beta2=0.999,
     eps=1e-8,
@@ -319,24 +458,72 @@ def gd_OLS_adam(
     amsgrad=False,
 ):
     """
-    Adam for OLS.
-    Returns: theta, mse_history
+    Unified Adam optimizer for OLS, Ridge, and Lasso.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Feature matrix
+    y : np.ndarray
+        Target vector
+    eta : float
+        Learning rate
+    num_iters : int
+        Maximum number of iterations
+    method : str
+        Regression method: 'ols', 'ridge', or 'lasso'
+    lam : float, optional
+        Regularization parameter (required for ridge and lasso)
+    beta1 : float
+        Exponential decay rate for first moment estimates
+    beta2 : float
+        Exponential decay rate for second moment estimates
+    eps : float
+        Small value to prevent division by zero
+    tol : float
+        Convergence tolerance
+    amsgrad : bool
+        Whether to use AMSGrad variant
+
+    Returns
+    -------
+    theta : np.ndarray
+        Fitted parameters
+    mse_history : list
+        MSE values at each iteration
     """
-    n, d = X.shape
-    theta = np.zeros(d)
-    m = np.zeros(d)  # first moment
-    v = np.zeros(d)  # second moment
-    v_max = np.zeros(d)  # for AMSGrad
+    # Validate inputs
+    if method.lower() not in ["ols", "ridge", "lasso"]:
+        raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
+
+    if method.lower() in ["ridge", "lasso"] and lam is None:
+        raise ValueError(f"{method} regression requires lam parameter")
+
+    n_features = X.shape[1]
+    theta = np.zeros(n_features)
+    m = np.zeros(n_features)  # first moment
+    v = np.zeros(n_features)  # second moment
+    v_max = np.zeros(n_features)  # for AMSGrad
     mse_history = []
 
     for t in range(1, num_iters + 1):
-        r = X @ theta - y
-        mse_history.append(np.mean(r**2))
+        # predict + MSE
+        y_pred = X @ theta
+        mse = mean_squared_error(y_true=y, y_pred=y_pred)
+        mse_history.append(mse)
 
-        # grad: (2/n) X^T (Xθ - y)
-        grad = (2.0 / n) * (X.T @ r)
+        # gradient based on method
+        if method.lower() == "ols":
+            grad = OLS_gradient(X, y, theta)
 
-        # moments
+        elif method.lower() == "ridge":
+            grad = Ridge_gradient(X, y, theta, lam)
+
+        elif method.lower() == "lasso":
+            # For Lasso, apply Adam to smooth part, then proximal step
+            grad = OLS_gradient(X, y, theta)
+
+        # Adam update
         m = beta1 * m + (1.0 - beta1) * grad
         v = beta2 * v + (1.0 - beta2) * (grad**2)
 
@@ -350,62 +537,16 @@ def gd_OLS_adam(
         else:
             denom = np.sqrt(v_hat) + eps
 
-        theta -= eta * (m_hat / denom)
+        adapted_grad = m_hat / denom
 
-        if np.linalg.norm(grad) < tol:
-            break
-
-    return theta, mse_history
-
-
-def gd_Ridge_adam(
-    X,
-    y,
-    eta=1e-2,
-    num_iters=10_000,
-    lam=1e-2,
-    beta1=0.9,
-    beta2=0.999,
-    eps=1e-8,
-    tol=1e-10,
-    regularize_bias=False,
-    amsgrad=False,
-):
-    """
-    Adam for Ridge.
-    Returns: theta, mse_history
-    """
-    n, d = X.shape
-    theta = np.zeros(d)
-    m = np.zeros(d)
-    v = np.zeros(d)
-    v_max = np.zeros(d)
-    mse_history = []
-
-    for t in range(1, num_iters + 1):
-        r = X @ theta - y
-        mse_history.append(np.mean(r**2))
-
-        # ridge grad: (2/n) X^T (Xθ - y) + 2λθ  (optionally skip bias)
-        grad = (2.0 / n) * (X.T @ r) + 2.0 * lam * theta
-        if not regularize_bias:
-            grad = grad.copy()
-            grad[0] -= 2.0 * lam * theta[0]
-
-        m = beta1 * m + (1.0 - beta1) * grad
-        v = beta2 * v + (1.0 - beta2) * (grad**2)
-
-        m_hat = m / (1.0 - beta1**t)
-        v_hat = v / (1.0 - beta2**t)
-
-        if amsgrad:
-            v_max = np.maximum(v_max, v_hat)
-            denom = np.sqrt(v_max) + eps
+        if method.lower() == "lasso":
+            # Apply proximal step for Lasso
+            theta_temp = theta - eta * adapted_grad
+            theta = soft_threshold(theta_temp, eta * lam)
         else:
-            denom = np.sqrt(v_hat) + eps
+            theta = theta - eta * adapted_grad
 
-        theta -= eta * (m_hat / denom)
-
+        # early stop (by grad norm)
         if np.linalg.norm(grad) < tol:
             break
 
@@ -479,171 +620,6 @@ def gd_lasso_basic(
         theta = theta - eta * grad
 
         # Early stopping
-        if np.linalg.norm(grad) < tol:
-            break
-
-    return theta, mse_history
-
-
-def gd_lasso_momentum(
-    X,
-    y,
-    eta=1e-4,
-    num_iters=10_000,
-    lam=1e-2,
-    beta=0.9,
-    tol=1e-10,
-    regularize_bias=False,
-):
-    """
-    LASSO with momentum - adapting your existing momentum code.
-    """
-    n_features = X.shape[1]
-    theta = np.zeros(n_features)
-    v = np.zeros_like(theta)  # velocity
-    mse_history = []
-
-    for t in range(num_iters):
-        # Calculate MSE
-        y_pred = X @ theta
-        mse = mean_squared_error(y, y_pred)
-        mse_history.append(mse)
-
-        # Compute gradient (same as your OLS but with L1 penalty)
-        grad = lasso_gradient(X, y, theta, lam, regularize_bias)
-
-        # Momentum update (exactly like your existing code)
-        v = beta * v + grad
-        theta = theta - eta * v
-
-        if np.linalg.norm(grad) < tol:
-            break
-
-    return theta, mse_history
-
-
-def gd_lasso_adagrad(
-    X,
-    y,
-    eta=1e-2,
-    num_iters=10_000,
-    lam=1e-2,
-    eps=1e-8,
-    tol=1e-10,
-    regularize_bias=False,
-):
-    """
-    LASSO with Adagrad - adapting your existing Adagrad code.
-    """
-    n, d = X.shape
-    theta = np.zeros(d)
-    G = np.zeros(d)
-    mse_history = []
-
-    for _ in range(num_iters):
-        y_pred = X @ theta
-        mse = mean_squared_error(y, y_pred)
-        mse_history.append(mse)
-
-        # Use LASSO gradient instead of OLS gradient
-        grad = lasso_gradient(X, y, theta, lam, regularize_bias)
-
-        # Adagrad scaling (same as your existing code)
-        G += grad**2
-        scaled_grad = grad / (np.sqrt(G) + eps)
-
-        theta -= eta * scaled_grad
-
-        if np.linalg.norm(grad) < tol:
-            break
-
-    return theta, mse_history
-
-
-def gd_lasso_rmsprop(
-    X,
-    y,
-    eta=1e-3,
-    num_iters=10_000,
-    lam=1e-2,
-    beta=0.9,
-    eps=1e-8,
-    tol=1e-10,
-    regularize_bias=False,
-):
-    """
-    LASSO with RMSprop - adapting your existing RMSprop code.
-    """
-    n, d = X.shape
-    theta = np.zeros(d)
-    S = np.zeros(d)  # EMA of squared gradients
-    mse_history = []
-
-    for t in range(num_iters):
-        y_pred = X @ theta
-        mse = mean_squared_error(y, y_pred)
-        mse_history.append(mse)
-
-        # Use LASSO gradient
-        grad = lasso_gradient(X, y, theta, lam, regularize_bias)
-
-        # RMSprop update (same as your existing code)
-        S = beta * S + (1.0 - beta) * (grad**2)
-        theta -= eta * grad / (np.sqrt(S) + eps)
-
-        if np.linalg.norm(grad) < tol:
-            break
-
-    return theta, mse_history
-
-
-def gd_lasso_adam(
-    X,
-    y,
-    eta=1e-3,
-    num_iters=10_000,
-    lam=1e-2,
-    beta1=0.9,
-    beta2=0.999,
-    eps=1e-8,
-    tol=1e-10,
-    regularize_bias=False,
-    amsgrad=False,
-):
-    """
-    LASSO with Adam - adapting your existing Adam code.
-    """
-    n, d = X.shape
-    theta = np.zeros(d)
-    m = np.zeros(d)  # first moment
-    v = np.zeros(d)  # second moment
-    v_max = np.zeros(d)  # for AMSGrad
-    mse_history = []
-
-    for t in range(1, num_iters + 1):
-        y_pred = X @ theta
-        mse = mean_squared_error(y, y_pred)
-        mse_history.append(mse)
-
-        # Use LASSO gradient
-        grad = lasso_gradient(X, y, theta, lam, regularize_bias)
-
-        # Adam moments (same as your existing code)
-        m = beta1 * m + (1.0 - beta1) * grad
-        v = beta2 * v + (1.0 - beta2) * (grad**2)
-
-        # Bias correction
-        m_hat = m / (1.0 - beta1**t)
-        v_hat = v / (1.0 - beta2**t)
-
-        if amsgrad:
-            v_max = np.maximum(v_max, v_hat)
-            denom = np.sqrt(v_max) + eps
-        else:
-            denom = np.sqrt(v_hat) + eps
-
-        theta -= eta * (m_hat / denom)
-
         if np.linalg.norm(grad) < tol:
             break
 
