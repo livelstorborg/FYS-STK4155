@@ -13,20 +13,28 @@ lambda_values = np.logspace(-5, 3, 8)
 all_results = {}
 
 for N in sample_sizes:
+
     x = np.linspace(-1, 1, N)
-    y_true = runge(x) + np.random.normal(0, 0.1, size=N)
+    np.random.seed(42)
+    random_noise = np.random.normal(0, 0.1, N)
+    y_true = runge(x)
+    y_noise = y_true + random_noise
     degrees = range(1, 16)
 
     # Split data once for all degrees to ensure consistency
     data_splits = {}
     for deg in degrees:
-        X = polynomial_features(x, deg)
-        X_norm, y_centered, y_mean = scale_data(X, y_true)
-        X_train, X_test, y_train, y_test, x_train, x_test = train_test_split(
-            X_norm, y_centered, x, test_size=0.2
-        )
 
-        data_splits[deg] = [X_train, X_test, y_train, y_test, x_train, x_test, y_mean]
+        X = polynomial_features(x, deg)
+        X_train, X_test, y_train, y_test = train_test_split(X, y_noise, test_size=0.2, random_state=42)
+        x_train = X_train[:, 0] 
+        x_test = X_test[:, 0] 
+
+        # Scaling the training data and using the same parameters to scale the test data (to avoid data leakage)
+        X_train_s, y_train_s, X_mean, X_std, y_mean = scale_data(X_train, y_train)
+        X_test_s, y_test_s, _, _, _ = scale_data(X_test, y_test, X_mean, X_std, y_mean)
+
+        data_splits[deg] = [X_train_s, X_test_s, y_train_s, y_test_s, x_train, x_test, y_mean]
 
     results_by_lambda = {}
 
