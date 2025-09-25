@@ -61,26 +61,27 @@ for i, lam in enumerate(lambda_values):
     )
 
     # Fit all methods for comparison
-    analysis.fit_analytical()  # OLS and Ridge
-    analysis.fit_lasso()  # Lasso
-    analysis.calculate_metrics()
+    analysis.fit_one('ols', 'analytical')  # OLS 
+    analysis.fit_one('ridge', 'analytical')  # Ridge
+    analysis.fit_one('lasso', 'gd')  # Lasso
 
     # Store results
     results["lambda"].append(lam)
-    results["train_mse"].append(analysis.train_mse_lasso_gd)
-    results["test_mse"].append(analysis.mse_lasso_gd)
-    results["train_r2"].append(analysis.train_r2_lasso_gd)
-    results["test_r2"].append(analysis.r2_lasso_gd)
+    results["train_mse"].append(analysis.get_metric('lasso', 'gd', 'train_mse'))
+    results["test_mse"].append(analysis.get_metric('lasso', 'gd', 'test_mse'))
+    results["train_r2"].append(analysis.get_metric('lasso', 'gd', 'train_r2'))
+    results["test_r2"].append(analysis.get_metric('lasso', 'gd', 'test_r2'))
 
     # Count non-zero coefficients (sparsity measure)
-    n_nonzero = np.sum(np.abs(analysis.theta_lasso_gd) > 1e-6)
+    theta_lasso = analysis.get_theta('lasso', 'gd')
+    n_nonzero = np.sum(np.abs(theta_lasso) > 1e-6)
     results["n_nonzero_coefs"].append(n_nonzero)
-    results["theta_values"].append(analysis.theta_lasso_gd.copy())
+    results["theta_values"].append(theta_lasso.copy())
     results["instances"].append(analysis)
 
-    print(f"  Train MSE: {analysis.train_mse_lasso_gd:.6f}")
-    print(f"  Test MSE:  {analysis.mse_lasso_gd:.6f}")
-    print(f"  Test R²:   {analysis.r2_lasso_gd:.6f}")
+    print(f"  Train MSE: {analysis.get_metric('lasso', 'gd', 'train_mse'):.6f}")
+    print(f"  Test MSE:  {analysis.get_metric('lasso', 'gd', 'test_mse'):.6f}")
+    print(f"  Test R²:   {analysis.get_metric('lasso', 'gd', 'test_r2'):.6f}")
     print(f"  Non-zero coefficients: {n_nonzero}/{degree}")
 
 print("\n" + "=" * 60)
@@ -106,25 +107,15 @@ print(
 )
 print("-" * 65)
 
-methods_to_compare = ["ols_analytical", "ridge_analytical", "lasso_gd"]
+methods_to_compare = ["ols", "ridge", "lasso"]
 method_names = ["OLS", "Ridge", "Lasso"]
+optimizers = ["analytical", "analytical", "gd"]
 
-for method, name in zip(methods_to_compare, method_names):
-    if method == "ols_analytical":
-        train_mse = optimal_analysis.train_mse_ols_analytical
-        test_mse = optimal_analysis.mse_ols_analytical
-        test_r2 = optimal_analysis.r2_ols_analytical
-        theta = optimal_analysis.theta_ols_analytical
-    elif method == "ridge_analytical":
-        train_mse = optimal_analysis.train_mse_ridge_analytical
-        test_mse = optimal_analysis.mse_ridge_analytical
-        test_r2 = optimal_analysis.r2_ridge_analytical
-        theta = optimal_analysis.theta_ridge_analytical
-    else:  # lasso_gd
-        train_mse = optimal_analysis.train_mse_lasso_gd
-        test_mse = optimal_analysis.mse_lasso_gd
-        test_r2 = optimal_analysis.r2_lasso_gd
-        theta = optimal_analysis.theta_lasso_gd
+for method, name, opt in zip(methods_to_compare, method_names, optimizers):
+    train_mse = optimal_analysis.get_metric(method, opt, 'train_mse')
+    test_mse = optimal_analysis.get_metric(method, opt, 'test_mse')
+    test_r2 = optimal_analysis.get_metric(method, opt, 'test_r2')
+    theta = optimal_analysis.get_theta(method, opt)
 
     n_nonzero = np.sum(np.abs(theta) > 1e-6)
     print(
