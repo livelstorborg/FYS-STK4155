@@ -9,6 +9,12 @@ from .utils import (
     gd_adagrad,
     gd_rmsprop,
     gd_adam,
+    # Add stochastic imports
+    stochastic_gd,
+    stochastic_gd_momentum,
+    stochastic_gd_adagrad,
+    stochastic_gd_rmsprop,
+    stochastic_gd_adam,
 )
 
 
@@ -23,7 +29,17 @@ class RegressionAnalysis:
     """
 
     def __init__(
-        self, data, degree, lam=0.0, eta=0.01, num_iters=1000, full_dataset=False
+        self, 
+        data, 
+        degree, 
+        lam=0.0, 
+        eta=0.01, 
+        num_iters=1000, 
+        full_dataset=False,
+        # Add stochastic parameters
+        batch_size=32,
+        n_epochs=50,
+        random_state=None
     ):
         if full_dataset:
             # data = [X_full, y_full, y_mean] (already centered)
@@ -40,18 +56,34 @@ class RegressionAnalysis:
         self.lam = lam
         self.eta = eta
         self.num_iters = num_iters
+        # Add stochastic parameters
+        self.batch_size = batch_size
+        self.n_epochs = n_epochs
+        self.random_state = random_state
 
         # Where everything lands: runs[(model, opt)] -> dict of artifacts
         self.runs: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
-        # Available models/opts
+        # Available models/opts - add stochastic optimizers
         self._models = ("ols", "ridge", "lasso")
         self._opt_fns = {
+            # Full-batch optimizers
             "gd": gradient_descent,
             "momentum": gd_momentum,
             "adagrad": gd_adagrad,
             "rmsprop": gd_rmsprop,
             "adam": gd_adam,
+            # Stochastic optimizers
+            "sgd": stochastic_gd,
+            "sgd_momentum": stochastic_gd_momentum,
+            "sgd_adagrad": stochastic_gd_adagrad,
+            "sgd_rmsprop": stochastic_gd_rmsprop,
+            "sgd_adam": stochastic_gd_adam,
+        }
+        
+        # Track which optimizers are stochastic
+        self._stochastic_opts = {
+            "sgd", "sgd_momentum", "sgd_adagrad", "sgd_rmsprop", "sgd_adam"
         }
 
     # ----------------- internals -----------------
@@ -92,8 +124,9 @@ class RegressionAnalysis:
         """
         Fit a single (model, opt) combo.
         model in {'ols','ridge','lasso'}
-        opt   in {'analytical','gd','momentum','adagrad','rmsprop','adam'}
-        Extra optimizer-specific kwargs (e.g. beta, eps, beta1, beta2, amsgrad) can be passed via **opt_kwargs.
+        opt   in {'analytical','gd','momentum','adagrad','rmsprop','adam',
+                  'sgd','sgd_momentum','sgd_adagrad','sgd_rmsprop','sgd_adam'}
+        Extra optimizer-specific kwargs can be passed via **opt_kwargs.
         """
         if not self._valid_combo(model, opt):
             raise ValueError(f"Invalid combo: ({model}, {opt})")
@@ -107,11 +140,28 @@ class RegressionAnalysis:
                 lam=(self.lam if model == "ridge" else 0.0),
             )
             history = None
+        elif opt in self._stochastic_opts:
+            # Stochastic optimizer - different parameter structure
+            if self.eta is None or self.n_epochs is None:
+                raise ValueError("eta and n_epochs required for stochastic methods")
+            
+            lam_arg = self.lam if model in ("ridge", "lasso") else None
+            theta, history = self._opt_fns[opt](
+                self.X_train,
+                self.y_train,
+                method=model,
+                lam=lam_arg,
+                eta=self.eta,
+                n_epochs=self.n_epochs,
+                batch_size=opt_kwargs.get("batch_size", self.batch_size),
+                random_state=opt_kwargs.get("random_state", self.random_state),
+                **{k: v for k, v in opt_kwargs.items() 
+                   if k not in ["batch_size", "random_state"]}
+            )
         else:
+            # Full-batch optimizer - original parameter structure  
             if self.eta is None or self.num_iters is None:
-                raise ValueError(
-                    "eta and num_iters required for gradient-based methods"
-                )
+                raise ValueError("eta and num_iters required for gradient-based methods")
             lam_arg = self.lam if model in ("ridge", "lasso") else 0.0
             theta, history = self._opt_fns[opt](
                 self.X_train,
@@ -149,10 +199,10 @@ class RegressionAnalysis:
         Fit a grid of (models x opts).
         Example:
             ra.fit_many(models=('ols','ridge','lasso'),
-                        opts=('analytical','gd','adam'),
-                        beta=0.9, eps=1e-8)
-        Any optimizer-specific parameters can be included in **opt_kwargs; they’ll be ignored by
-        optimizers that don’t use them.
+                        opts=('analytical','gd','adam','sgd','sgd_adam'),
+                        beta=0.9, eps=1e-8, batch_size=64)
+        Any optimizer-specific parameters can be included in **opt_kwargs; they'll be ignored by
+        optimizers that don't use them.
         """
         models = models or self._models
         opts = opts or ("analytical", "gd", "momentum", "adagrad", "rmsprop", "adam")
