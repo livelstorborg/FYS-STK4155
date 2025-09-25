@@ -1,14 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
 import pandas as pd
 
 from .utils import polynomial_features, scale_data
 from .regression import RegressionAnalysis
 
 
-def analyze_mse_vs_degree(x, y, degrees, **kwargs):
+def analyze_mse_vs_degree(x, y, degrees, test_size=0.2, random_state=42, **kwargs):
     """
     Analyze MSE vs polynomial degree for both training and test sets.
 
@@ -20,8 +19,12 @@ def analyze_mse_vs_degree(x, y, degrees, **kwargs):
         True y values (Runge function)
     degrees : list or range
         Polynomial degrees to analyze
+    test_size : float, optional
+        Fraction of data to use for testing (default: 0.2)
+    random_state : int, optional
+        Random state for train/test split (default: 42)
     **kwargs : dict
-        Additional parameters passed to create_analysis_instance()
+        Additional parameters for RegressionAnalysis
 
     Returns
     -------
@@ -40,8 +43,17 @@ def analyze_mse_vs_degree(x, y, degrees, **kwargs):
     for degree in degrees:
         print(f"Processing degree {degree}...")
 
+        # Create data splits for this degree
+        X = polynomial_features(x, degree)
+        X_norm, y_centered, y_mean = scale_data(X, y)
+        X_train, X_test, y_train, y_test, x_train, x_test = train_test_split(
+            X_norm, y_centered, x, test_size=test_size, random_state=random_state
+        )
+
+        data = [X_train, X_test, y_train, y_test, x_train, x_test, y_mean]
+
         # Create analysis instance for this degree
-        analysis = create_analysis_instance(x, y, degree, **kwargs)
+        analysis = RegressionAnalysis(data, degree=degree, **kwargs)
 
         # Fit analytical OLS solution
         analysis.fit_analytical()
@@ -49,7 +61,7 @@ def analyze_mse_vs_degree(x, y, degrees, **kwargs):
         analysis.calculate_metrics()
 
         # Get training MSE
-        train_mse = get_train_mse(analysis, method="ols_analytical")
+        train_mse = analysis.get_train_mse(method="ols_analytical")
 
         # Store results
         train_mse_list.append(train_mse)
@@ -66,65 +78,6 @@ def analyze_mse_vs_degree(x, y, degrees, **kwargs):
         "test_mse": test_mse_list,
         "instances": analysis_instances,
     }
-
-
-def get_train_mse(analysis_instance, method="ols_analytical"):
-    """
-    Calculate training MSE for a specific method from an analysis instance.
-
-    Parameters
-    ----------
-    analysis_instance : RegressionAnalysis
-        Fitted analysis instance
-    method : str
-        Method to calculate MSE for ('ols_analytical', 'ridge_analytical',
-        'ols_gd', 'ridge_gd')
-
-    Returns
-    -------
-    float
-        Training MSE
-    """
-
-    if method == "ols_analytical":
-        if analysis_instance.theta_ols_analytical is None:
-            raise ValueError("OLS analytical solution not fitted")
-        y_train_pred = (
-            analysis_instance.X_train @ analysis_instance.theta_ols_analytical
-            + analysis_instance.y_mean
-        )
-
-    elif method == "ridge_analytical":
-        if analysis_instance.theta_ridge_analytical is None:
-            raise ValueError("Ridge analytical solution not fitted")
-        y_train_pred = (
-            analysis_instance.X_train @ analysis_instance.theta_ridge_analytical
-            + analysis_instance.y_mean
-        )
-
-    elif method == "ols_gd":
-        if analysis_instance.theta_ols_gd is None:
-            raise ValueError("OLS gradient descent solution not fitted")
-        y_train_pred = (
-            analysis_instance.X_train @ analysis_instance.theta_ols_gd
-            + analysis_instance.y_mean
-        )
-
-    elif method == "ridge_gd":
-        if analysis_instance.theta_ridge_gd is None:
-            raise ValueError("Ridge gradient descent solution not fitted")
-        y_train_pred = (
-            analysis_instance.X_train @ analysis_instance.theta_ridge_gd
-            + analysis_instance.y_mean
-        )
-
-    else:
-        raise ValueError(f"Unknown method: {method}")
-
-    # True training values (unscaled)
-    y_train_true = analysis_instance.y_train + analysis_instance.y_mean
-
-    return mean_squared_error(y_train_true, y_train_pred)
 
 
 def compare_methods(analysis_instance, methods=["ols_analytical", "ridge_analytical"]):
@@ -147,7 +100,7 @@ def compare_methods(analysis_instance, methods=["ols_analytical", "ridge_analyti
     results = {}
 
     for method in methods:
-        train_mse = get_train_mse(analysis_instance, method)
+        train_mse = analysis_instance.get_train_mse(method)
 
         # Get test MSE
         if method == "ols_analytical":
