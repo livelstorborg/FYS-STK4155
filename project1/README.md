@@ -21,21 +21,20 @@
 ## Run the code 
 ### Using uv (recommended)
 If you dont have uv, install by using pip:
-```pip install uv
-```
+    pip install uv
+
 
 Then sync the dependencies by running:
-```uv sync
-```
+    uv sync
+
 
 Finally, you can run files
-```uv run main_<name>.py
-```
+    uv run main_<name>.py
+
 
 ### Using pip
 Install the dependencies by running:
-```pip install -r requirements.txt
-```
+    pip install -r requirements.txt
+
 Run files using python:
-```python3 main_<name>.py
-```
+    python3 main_<name>.py
