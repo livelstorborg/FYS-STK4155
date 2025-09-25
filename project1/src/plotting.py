@@ -349,7 +349,7 @@ def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam,
 
 
 
-def solution_comparison_gd(x, solutions, sample_size, degree, lam):
+def solution_comparison_gd(x, y_noise, y_true, solutions, sample_size, degree, lam, test=False):
     """
     Plotting solutions using different methods for computing the optimal parameters (gradient descent).
     """
@@ -361,19 +361,26 @@ def solution_comparison_gd(x, solutions, sample_size, degree, lam):
         y_adagrad,
         y_rmsprop,
         y_adam,
-        y_noise,
-        y_true,
+        x_plotting
     ) = solutions
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
     plt.scatter(x, y_noise, label="y_noise")
-    plt.plot(x, y_analytical, label="Analytical")
-    plt.plot(x, y_gd, label="Gradient Descent")
-    plt.plot(x, y_momentum, label="Momentum")
-    plt.plot(x, y_adagrad, label="AdaGrad")
-    plt.plot(x, y_rmsprop, label="RMSProp")
-    plt.plot(x, y_adam, label="Adam")
+    if test:
+        plt.scatter(x_plotting, y_analytical, label="Analytical")
+        plt.scatter(x_plotting, y_gd, label="Gradient Descent")
+        plt.scatter(x_plotting, y_momentum, label="Momentum")
+        plt.scatter(x_plotting, y_adagrad, label="AdaGrad")
+        plt.scatter(x_plotting, y_rmsprop, label="RMSProp")
+        plt.scatter(x_plotting, y_adam, label="Adam")
+    else:
+        plt.plot(x_plotting, y_analytical, label="Analytical")
+        plt.plot(x_plotting, y_gd, label="Gradient Descent")
+        plt.plot(x_plotting, y_momentum, label="Momentum")
+        plt.plot(x_plotting, y_adagrad, label="AdaGrad")
+        plt.plot(x_plotting, y_rmsprop, label="RMSProp")
+        plt.plot(x_plotting, y_adam, label="Adam")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
