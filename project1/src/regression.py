@@ -4,7 +4,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 from .utils import (
     analytical_solution,
-    gradient_descent,  # plain GD
+    gradient_descent,  
     gd_momentum,
     gd_adagrad,
     gd_rmsprop,
@@ -26,11 +26,11 @@ class RegressionAnalysis:
         self, data, degree, lam=0.0, eta=0.01, num_iters=1000, full_dataset=False
     ):
         if full_dataset:
-            # data = [X_full, y_full] (already centered)
-            self.X_full, self.y_full = data
+            # data = [X_full, y_full, y_mean] (already centered)
+            self.X_full, self.y_full, self.y_mean = data
             self.X_train = self.X_test = self.X_full
             self.y_train = self.y_test = self.y_full
-            self.y_offset = 0.0
+            self.y_offset = self.y_mean
         else:
             # data = [X_train, X_test, y_train, y_test, x_train, x_test, y_mean]
             self.X_train, self.X_test, self.y_train, self.y_test, *_rest = data
