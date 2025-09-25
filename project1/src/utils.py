@@ -679,20 +679,6 @@ def create_minibatches(X, y, batch_size, shuffle=True):
 
 
 
-def stochastic_gd(method, ...):
-    if method = = "ols":
-        cost = CostOLS(theta)
-        grad = grad(cost)
-        
-    elif method == "ridge":
-        cost = CostRidge(theta)
-        grad = grad(cost)
-
-    elif method == "lasso":
-        cost = CostLasso(theta)
-        grad = grad(cost)
-
-
 
 
 
