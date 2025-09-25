@@ -269,7 +269,7 @@ def theta_evolution_lambdas(
     for lam in lambda_values:
         results = results_by_lambda[lam]
         theta1_values = [
-            instance.theta_ridge_analytical[0] for instance in results["instances"]
+            instance.get_theta('ridge', 'analytical')[0] for instance in results["instances"]
         ]
         plt.plot(
             degrees,
@@ -283,7 +283,7 @@ def theta_evolution_lambdas(
     if include_ols:
         first_results = results_by_lambda[lambda_values[0]]
         ols_theta1_values = [
-            instance.theta_ols_analytical[0] for instance in first_results["instances"]
+            instance.get_theta('ols', 'analytical')[0] for instance in first_results["instances"]
         ]
         plt.plot(
             degrees,
@@ -333,7 +333,7 @@ def solution_comparison(x, solutions, sample_size, degree, lam):
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.legend()
+    plt.legend(fontsize=16)
     plt.show()
 
 
@@ -367,5 +367,6 @@ def solution_comparison_gd(x, solutions, sample_size, degree, lam):
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.legend()
+    plt.legend(fontsize=16)
+    # plt.savefig()
     plt.show()
