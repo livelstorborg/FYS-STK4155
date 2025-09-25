@@ -387,3 +387,10 @@ def solution_comparison_gd(x, y_noise, y_true, solutions, sample_size, degree, l
     plt.legend(fontsize=16)
     # plt.savefig()
     plt.show()
+
+
+def optimizer_comparison():
+    pass
+
+def method_comparison():
+    pass
