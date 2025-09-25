@@ -15,22 +15,27 @@ sample_sizes = [500, 1000, 10000]
 all_results = {}
 
 for N in sample_sizes:
+
     x = np.linspace(-1, 1, N)
     np.random.seed(42)
     random_noise = np.random.normal(0, 0.1, N)
-    y_true = runge(x) + random_noise
+    y_true = runge(x)
+    y_noise = y_true + random_noise
     degrees = range(1, 16)
 
     # Split data once for all degrees to ensure consistency
     data_splits = {}  # Dictionary to store splits for each degree
     for deg in degrees:
         X = polynomial_features(x, deg)
-        X_norm, y_centered, y_mean = scale_data(X, y_true)
-        X_train, X_test, y_train, y_test, x_train, x_test = train_test_split(
-            X_norm, y_centered, x, test_size=0.2, random_state=42
-        )
+        X_train, X_test, y_train, y_test = train_test_split(X, y_noise, test_size=0.2, random_state=42)
+        x_train = X_train[:, 0] 
+        x_test = X_test[:, 0] 
 
-        data_splits[deg] = [X_train, X_test, y_train, y_test, x_train, x_test, y_mean]
+        # Scaling the training data and using the same parameters to scale the test data (to avoid data leakage)
+        X_train_s, y_train_s, X_mean, X_std, y_mean = scale_data(X_train, y_train)
+        X_test_s, y_test_s, _, _, _ = scale_data(X_test, y_test, X_mean, X_std, y_mean)
+
+        data_splits[deg] = [X_train_s, X_test_s, y_train_s, y_test_s, x_train, x_test, y_mean]
 
     # Create instances for all degrees
     results_current = {
@@ -63,13 +68,18 @@ for N in sample_sizes:
 
     all_results[N] = results_current
 
+
+
     # Further analysis for N=1000
     if N == 1000:
-        mse_degree_ols(all_results, sample_size=1000)  # MSE for N=1000 (a)
-        r2_degree_ols(results_current, sample_size=1000)  # R2 for N=1000 (a)
+        mse_degree_ols(all_results, sample_size=N)  # MSE for N=1000 (a)
+        r2_degree_ols(results_current, sample_size=N)  # R2 for N=1000 (a)
         theta_evolution_ols(
-            degrees, theta1_evolution, sample_size=1000
+            degrees, theta1_evolution, sample_size=N
         )  # Evolution of theta1 for N=1000 (a)
+
+
+
 
 # Plot for multiple sample sizes
 mse_degree_multiple(all_results, sample_sizes)
