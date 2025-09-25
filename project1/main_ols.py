@@ -16,7 +16,9 @@ all_results = {}
 
 for N in sample_sizes:
     x = np.linspace(-1, 1, N)
-    y_true = runge(x)
+    np.random.seed(42)
+    random_noise = np.random.normal(0, 0.1, N)
+    y_true = runge(x) + random_noise
     degrees = range(1, 16)
 
     # Split data once for all degrees to ensure consistency
@@ -44,21 +46,19 @@ for N in sample_sizes:
 
     for deg in degrees:
         analysis = RegressionAnalysis(
-            data_splits[deg], degree=deg, lam=None, eta=None, num_iters=None
+            data_splits[deg], degree=deg, lam=0.0, eta=None, num_iters=None
         )
 
-        analysis.fit_analytical()
-        analysis.predict()
-        analysis.calculate_metrics()
+        analysis.fit_one('ols', 'analytical')
 
-        results_current["train_mse"].append(analysis.train_mse_ols_analytical)
-        results_current["test_mse"].append(analysis.mse_ols_analytical)
-        results_current["train_r2"].append(analysis.train_r2_ols_analytical)
-        results_current["test_r2"].append(analysis.r2_ols_analytical)
+        results_current["train_mse"].append(analysis.get_metric('ols', 'analytical', 'train_mse'))
+        results_current["test_mse"].append(analysis.get_metric('ols', 'analytical', 'test_mse'))
+        results_current["train_r2"].append(analysis.get_metric('ols', 'analytical', 'train_r2'))
+        results_current["test_r2"].append(analysis.get_metric('ols', 'analytical', 'test_r2'))
         results_current["instances"].append(analysis)
 
         # Store theta1 evolution for all N (only plot for N=1000)
-        theta1 = analysis.theta_ols_analytical[0]
+        theta1 = analysis.get_theta('ols', 'analytical')[0]
         theta1_evolution.append(theta1)
 
     all_results[N] = results_current
