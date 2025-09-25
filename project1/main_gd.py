@@ -31,10 +31,10 @@ data = [X_train, X_test, y_train, y_test, x_train, x_test, y_mean]
 analysis = RegressionAnalysis(
     data, degree=degree, lam=lam, eta=eta, num_iters=num_iters
 )
-analysis.fit_analytical()
-analysis.fit_gradient_descent()
-analysis.predict()
-analysis.calculate_metrics()
+analysis.fit_one('ols', 'analytical')
+analysis.fit_one('ols', 'gd')
+analysis.fit_one('ridge', 'analytical')  
+analysis.fit_one('ridge', 'gd')
 
 
 X_full = polynomial_features(x, degree)
@@ -42,10 +42,10 @@ X_full_norm, _, _ = scale_data(
     X_full, y_true
 )  # normalize consistently with full dataset
 
-y_pred_ols_analytical = X_full_norm @ analysis.theta_ols_analytical + y_mean
-y_pred_ols_gd = X_full_norm @ analysis.theta_ols_gd + y_mean
-y_pred_ridge_analytical = X_full_norm @ analysis.theta_ridge_analytical + y_mean
-y_pred_ridge_gd = X_full_norm @ analysis.theta_ridge_gd + y_mean
+y_pred_ols_analytical = X_full_norm @ analysis.get_theta('ols', 'analytical') + y_mean
+y_pred_ols_gd = X_full_norm @ analysis.get_theta('ols', 'gd') + y_mean
+y_pred_ridge_analytical = X_full_norm @ analysis.get_theta('ridge', 'analytical') + y_mean
+y_pred_ridge_gd = X_full_norm @ analysis.get_theta('ridge', 'gd') + y_mean
 
 
 solutions = [
