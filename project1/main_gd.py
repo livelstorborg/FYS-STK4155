@@ -18,16 +18,14 @@ np.random.seed(42)
 random_noise = np.random.normal(0, 0.1, N)
 y_true = runge(x)   
 y_noise = y_true + random_noise                 
-
-
 X = polynomial_features(x, degree)           
-X_norm, y_centered, _, _, y_mean = scale_data(X, y_noise)  
+ 
 
 
 # =============================================================================
 #                          FULL DATASET ANALYSIS
 # =============================================================================
-
+X_norm, y_centered, _, _, y_mean = scale_data(X, y_noise) 
 data = [X_norm, y_centered, y_mean]
 analysis = RegressionAnalysis(
     data, 
