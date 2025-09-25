@@ -72,7 +72,7 @@ def Ridge_gradient(X, y, theta, lam):
 
 
 # Gradient descent for OLS with fixed learning rate
-def gd_OLS(X, y, eta, num_iters, stopping_param):
+def gd_OLS(X, y, eta, num_iters, tol=1e-8):
     n_features = X.shape[1]
     theta_OLS = np.zeros(n_features)
     mse_history = []
@@ -88,14 +88,14 @@ def gd_OLS(X, y, eta, num_iters, stopping_param):
         step = eta * grad_OLS
         theta_OLS = theta_OLS - step
 
-        if np.linalg.norm(step) < stopping_param:
+        if np.linalg.norm(step) < tol:
             break
 
     return theta_OLS, mse_history
 
 
 # Gradient descent for Ridge with fixed learning rate
-def gd_Ridge(X, y, eta, lam, num_iters, stopping_param):
+def gd_Ridge(X, y, eta, lam, num_iters, tol=1e-8):
     n_features = X.shape[1]
     theta_Ridge = np.zeros(n_features)
     mse_history = []
@@ -111,7 +111,7 @@ def gd_Ridge(X, y, eta, lam, num_iters, stopping_param):
         step = eta * grad_Ridge
         theta_Ridge = theta_Ridge - step
 
-        if np.linalg.norm(step) < stopping_param:
+        if np.linalg.norm(step) < tol:
             break
 
     return theta_Ridge, mse_history
@@ -412,20 +412,12 @@ def gd_Ridge_adam(
     return theta, mse_history
 
 
-
-
-
-
-
-
-
-
 def lasso_gradient(X, y, theta, lam, regularize_bias=False):
     """
     Compute gradient/subgradient for LASSO regression.
-    
+
     Based on: ∂C/∂θ = (2/n)X^T(Xθ - y) + λ·sgn(θ)
-    
+
     Parameters
     ----------
     X : np.ndarray
@@ -438,60 +430,71 @@ def lasso_gradient(X, y, theta, lam, regularize_bias=False):
         Regularization parameter λ
     regularize_bias : bool
         Whether to apply L1 penalty to bias term (usually False)
-        
+
     Returns
     -------
     np.ndarray
         Gradient vector
     """
     n = X.shape[0]
-    
+
     # Standard MSE gradient: (2/n)X^T(Xθ - y)
     residual = X @ theta - y
     mse_grad = (2.0 / n) * (X.T @ residual)
-    
+
     # L1 penalty gradient: λ·sgn(θ)
     # For θ = 0, we choose sgn(0) = 0 (could be any value in [-1,1])
     l1_grad = lam * np.sign(theta)
-    
+
     # Combine gradients
     gradient = mse_grad + l1_grad
-    
+
     # Optionally don't regularize bias term (first coefficient)
     if not regularize_bias and len(theta) > 0:
         gradient[0] = mse_grad[0]  # Remove L1 penalty from bias
-    
+
     return gradient
 
 
-def gd_lasso_basic(X, y, eta=1e-4, num_iters=10_000, lam=1e-2, tol=1e-10, regularize_bias=False):
+def gd_lasso_basic(
+    X, y, eta=1e-4, num_iters=10_000, lam=1e-2, tol=1e-10, regularize_bias=False
+):
     """
     Basic gradient descent for LASSO regression.
     """
     n_features = X.shape[1]
     theta = np.zeros(n_features)
     mse_history = []
-    
+
     for t in range(num_iters):
         # Calculate MSE for monitoring
         y_pred = X @ theta
         mse = mean_squared_error(y, y_pred)
         mse_history.append(mse)
-        
+
         # Compute gradient
         grad = lasso_gradient(X, y, theta, lam, regularize_bias)
-        
+
         # Update parameters
         theta = theta - eta * grad
-        
+
         # Early stopping
         if np.linalg.norm(grad) < tol:
             break
-    
+
     return theta, mse_history
 
 
-def gd_lasso_momentum(X, y, eta=1e-4, num_iters=10_000, lam=1e-2, beta=0.9, tol=1e-10, regularize_bias=False):
+def gd_lasso_momentum(
+    X,
+    y,
+    eta=1e-4,
+    num_iters=10_000,
+    lam=1e-2,
+    beta=0.9,
+    tol=1e-10,
+    regularize_bias=False,
+):
     """
     LASSO with momentum - adapting your existing momentum code.
     """
@@ -499,27 +502,36 @@ def gd_lasso_momentum(X, y, eta=1e-4, num_iters=10_000, lam=1e-2, beta=0.9, tol=
     theta = np.zeros(n_features)
     v = np.zeros_like(theta)  # velocity
     mse_history = []
-    
+
     for t in range(num_iters):
         # Calculate MSE
         y_pred = X @ theta
         mse = mean_squared_error(y, y_pred)
         mse_history.append(mse)
-        
+
         # Compute gradient (same as your OLS but with L1 penalty)
         grad = lasso_gradient(X, y, theta, lam, regularize_bias)
-        
+
         # Momentum update (exactly like your existing code)
         v = beta * v + grad
         theta = theta - eta * v
-        
+
         if np.linalg.norm(grad) < tol:
             break
-    
+
     return theta, mse_history
 
 
-def gd_lasso_adagrad(X, y, eta=1e-2, num_iters=10_000, lam=1e-2, eps=1e-8, tol=1e-10, regularize_bias=False):
+def gd_lasso_adagrad(
+    X,
+    y,
+    eta=1e-2,
+    num_iters=10_000,
+    lam=1e-2,
+    eps=1e-8,
+    tol=1e-10,
+    regularize_bias=False,
+):
     """
     LASSO with Adagrad - adapting your existing Adagrad code.
     """
@@ -527,28 +539,38 @@ def gd_lasso_adagrad(X, y, eta=1e-2, num_iters=10_000, lam=1e-2, eps=1e-8, tol=1
     theta = np.zeros(d)
     G = np.zeros(d)
     mse_history = []
-    
+
     for _ in range(num_iters):
         y_pred = X @ theta
         mse = mean_squared_error(y, y_pred)
         mse_history.append(mse)
-        
+
         # Use LASSO gradient instead of OLS gradient
         grad = lasso_gradient(X, y, theta, lam, regularize_bias)
-        
+
         # Adagrad scaling (same as your existing code)
         G += grad**2
         scaled_grad = grad / (np.sqrt(G) + eps)
-        
+
         theta -= eta * scaled_grad
-        
+
         if np.linalg.norm(grad) < tol:
             break
-    
+
     return theta, mse_history
 
 
-def gd_lasso_rmsprop(X, y, eta=1e-3, num_iters=10_000, lam=1e-2, beta=0.9, eps=1e-8, tol=1e-10, regularize_bias=False):
+def gd_lasso_rmsprop(
+    X,
+    y,
+    eta=1e-3,
+    num_iters=10_000,
+    lam=1e-2,
+    beta=0.9,
+    eps=1e-8,
+    tol=1e-10,
+    regularize_bias=False,
+):
     """
     LASSO with RMSprop - adapting your existing RMSprop code.
     """
@@ -556,27 +578,38 @@ def gd_lasso_rmsprop(X, y, eta=1e-3, num_iters=10_000, lam=1e-2, beta=0.9, eps=1
     theta = np.zeros(d)
     S = np.zeros(d)  # EMA of squared gradients
     mse_history = []
-    
+
     for t in range(num_iters):
         y_pred = X @ theta
         mse = mean_squared_error(y, y_pred)
         mse_history.append(mse)
-        
+
         # Use LASSO gradient
         grad = lasso_gradient(X, y, theta, lam, regularize_bias)
-        
+
         # RMSprop update (same as your existing code)
         S = beta * S + (1.0 - beta) * (grad**2)
         theta -= eta * grad / (np.sqrt(S) + eps)
-        
+
         if np.linalg.norm(grad) < tol:
             break
-    
+
     return theta, mse_history
 
 
-def gd_lasso_adam(X, y, eta=1e-3, num_iters=10_000, lam=1e-2, beta1=0.9, beta2=0.999, 
-                  eps=1e-8, tol=1e-10, regularize_bias=False, amsgrad=False):
+def gd_lasso_adam(
+    X,
+    y,
+    eta=1e-3,
+    num_iters=10_000,
+    lam=1e-2,
+    beta1=0.9,
+    beta2=0.999,
+    eps=1e-8,
+    tol=1e-10,
+    regularize_bias=False,
+    amsgrad=False,
+):
     """
     LASSO with Adam - adapting your existing Adam code.
     """
@@ -586,32 +619,32 @@ def gd_lasso_adam(X, y, eta=1e-3, num_iters=10_000, lam=1e-2, beta1=0.9, beta2=0
     v = np.zeros(d)  # second moment
     v_max = np.zeros(d)  # for AMSGrad
     mse_history = []
-    
+
     for t in range(1, num_iters + 1):
         y_pred = X @ theta
         mse = mean_squared_error(y, y_pred)
         mse_history.append(mse)
-        
+
         # Use LASSO gradient
         grad = lasso_gradient(X, y, theta, lam, regularize_bias)
-        
+
         # Adam moments (same as your existing code)
         m = beta1 * m + (1.0 - beta1) * grad
         v = beta2 * v + (1.0 - beta2) * (grad**2)
-        
+
         # Bias correction
         m_hat = m / (1.0 - beta1**t)
         v_hat = v / (1.0 - beta2**t)
-        
+
         if amsgrad:
             v_max = np.maximum(v_max, v_hat)
             denom = np.sqrt(v_max) + eps
         else:
             denom = np.sqrt(v_hat) + eps
-        
+
         theta -= eta * (m_hat / denom)
-        
+
         if np.linalg.norm(grad) < tol:
             break
-    
+
     return theta, mse_history
