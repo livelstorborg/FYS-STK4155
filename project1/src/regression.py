@@ -12,22 +12,17 @@ import numpy as np
 
 
 class RegressionAnalysis:
-    """
-    Clean regression analysis class with lazy initialization.
-    No more massive variable declarations!
-    """
-
-    def __init__(self, data, degree, lam=None, eta=None, num_iters=None):
-        # Unpack data
-        (
-            self.X_train,
-            self.X_test,
-            self.y_train,
-            self.y_test,
-            self.x_train,
-            self.x_test,
-            self.y_mean,
-        ) = data
+    def __init__(self, data, degree, lam=0, eta=0.01, num_iters=1000, full_dataset=False):
+        if full_dataset:
+            # data is [X_full, y_full] 
+            self.X_full, self.y_full = data
+            self.X_train = self.X_test = self.X_full
+            self.y_train = self.y_test = self.y_full
+            self.x_train = self.x_test = None  # Not needed for analysis
+            self.y_mean = 0  # Already centered
+        else:
+            # Original train/test split mode
+            self.X_train, self.X_test, self.y_train, self.y_test, self.x_train, self.x_test, self.y_mean = data
 
         # Store parameters
         self.degree = degree
@@ -361,10 +356,10 @@ class RegressionAnalysis:
                 pass  # Skip if parameters missing
         self.predict()
 
-    # ================= PROPERTIES FOR BACKWARD COMPATIBILITY =================
-    # These properties provide the same interface as the old class
+    # ================= PROPERTIES =================
 
-    # Theta properties
+    # --------------- Theta Parameters ---------------
+    # ----- OLS -----
     @property
     def theta_ols_analytical(self) -> Optional[np.ndarray]:
         return self._get_result("theta_ols_analytical")
@@ -374,16 +369,6 @@ class RegressionAnalysis:
         if value is not None:
             self._store_result("theta_ols_analytical", value)
             self._fitted_methods.add("ols_analytical")
-
-    @property
-    def theta_ridge_analytical(self) -> Optional[np.ndarray]:
-        return self._get_result("theta_ridge_analytical")
-
-    @theta_ridge_analytical.setter
-    def theta_ridge_analytical(self, value):
-        if value is not None:
-            self._store_result("theta_ridge_analytical", value)
-            self._fitted_methods.add("ridge_analytical")
 
     @property
     def theta_ols_gd(self) -> Optional[np.ndarray]:
@@ -396,6 +381,33 @@ class RegressionAnalysis:
             self._fitted_methods.add("ols_gd")
 
     @property
+    def theta_ols_momentum(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ols_momentum")
+
+    @property
+    def theta_ols_adagrad(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ols_adagrad")
+
+    @property
+    def theta_ols_rmsprop(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ols_rmsprop")
+
+    @property
+    def theta_ols_adam(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ols_adam")
+
+    # ----- Ridge -----
+    @property
+    def theta_ridge_analytical(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ridge_analytical")
+
+    @theta_ridge_analytical.setter
+    def theta_ridge_analytical(self, value):
+        if value is not None:
+            self._store_result("theta_ridge_analytical", value)
+            self._fitted_methods.add("ridge_analytical")
+
+    @property
     def theta_ridge_gd(self) -> Optional[np.ndarray]:
         return self._get_result("theta_ridge_gd")
 
@@ -406,6 +418,23 @@ class RegressionAnalysis:
             self._fitted_methods.add("ridge_gd")
 
     @property
+    def theta_ridge_momentum(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ridge_momentum")
+
+    @property
+    def theta_ridge_adagrad(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ridge_adagrad")
+
+    @property
+    def theta_ridge_rmsprop(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ridge_rmsprop")
+
+    @property
+    def theta_ridge_adam(self) -> Optional[np.ndarray]:
+        return self._get_result("theta_ridge_adam")
+
+    # ----- Lasso -----
+    @property
     def theta_lasso_gd(self) -> Optional[np.ndarray]:
         return self._get_result("theta_lasso_gd")
 
@@ -415,161 +444,384 @@ class RegressionAnalysis:
             self._store_result("theta_lasso_gd", value)
             self._fitted_methods.add("lasso_gd")
 
-    # Optimizer theta properties
-    @property
-    def theta_ols_momentum(self) -> Optional[np.ndarray]:
-        return self._get_result("theta_ols_momentum")
-
-    @property
-    def theta_ridge_momentum(self) -> Optional[np.ndarray]:
-        return self._get_result("theta_ridge_momentum")
-
     @property
     def theta_lasso_momentum(self) -> Optional[np.ndarray]:
         return self._get_result("theta_lasso_momentum")
-
-    @property
-    def theta_ols_adagrad(self) -> Optional[np.ndarray]:
-        return self._get_result("theta_ols_adagrad")
-
-    @property
-    def theta_ridge_adagrad(self) -> Optional[np.ndarray]:
-        return self._get_result("theta_ridge_adagrad")
 
     @property
     def theta_lasso_adagrad(self) -> Optional[np.ndarray]:
         return self._get_result("theta_lasso_adagrad")
 
     @property
-    def theta_ols_rmsprop(self) -> Optional[np.ndarray]:
-        return self._get_result("theta_ols_rmsprop")
-
-    @property
-    def theta_ridge_rmsprop(self) -> Optional[np.ndarray]:
-        return self._get_result("theta_ridge_rmsprop")
-
-    @property
     def theta_lasso_rmsprop(self) -> Optional[np.ndarray]:
         return self._get_result("theta_lasso_rmsprop")
-
-    @property
-    def theta_ols_adam(self) -> Optional[np.ndarray]:
-        return self._get_result("theta_ols_adam")
-
-    @property
-    def theta_ridge_adam(self) -> Optional[np.ndarray]:
-        return self._get_result("theta_ridge_adam")
 
     @property
     def theta_lasso_adam(self) -> Optional[np.ndarray]:
         return self._get_result("theta_lasso_adam")
 
-    # Prediction properties
+    # --------------- Predicted Values ---------------
+    # ----- OLS -----
     @property
     def y_pred_ols_analytical(self) -> Optional[np.ndarray]:
         return self._get_result("y_pred_ols_analytical")
-
-    @property
-    def y_pred_ridge_analytical(self) -> Optional[np.ndarray]:
-        return self._get_result("y_pred_ridge_analytical")
 
     @property
     def y_pred_ols_gd(self) -> Optional[np.ndarray]:
         return self._get_result("y_pred_ols_gd")
 
     @property
+    def y_pred_ols_momentum(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_ols_momentum")
+
+    @property
+    def y_pred_ols_adagrad(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_ols_adagrad")
+
+    @property
+    def y_pred_ols_rmsprop(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_ols_rmsprop")
+
+    @property
+    def y_pred_ols_adam(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_ols_adam")
+
+    # ----- Ridge -----
+    @property
+    def y_pred_ridge_analytical(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_ridge_analytical")
+
+    @property
     def y_pred_ridge_gd(self) -> Optional[np.ndarray]:
         return self._get_result("y_pred_ridge_gd")
 
     @property
+    def y_pred_ridge_momentum(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_ridge_momentum")
+
+    @property
+    def y_pred_ridge_adagrad(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_ridge_adagrad")
+
+    @property
+    def y_pred_ridge_rmsprop(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_ridge_rmsprop")
+
+    @property
+    def y_pred_ridge_adam(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_ridge_adam")
+
+    # ----- Lasso -----
+    @property
     def y_pred_lasso_gd(self) -> Optional[np.ndarray]:
         return self._get_result("y_pred_lasso_gd")
 
-    # MSE properties
+    @property
+    def y_pred_lasso_momentum(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_lasso_momentum")
+
+    @property
+    def y_pred_lasso_adagrad(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_lasso_adagrad")
+
+    @property
+    def y_pred_lasso_rmsprop(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_lasso_rmsprop")
+
+    @property
+    def y_pred_lasso_adam(self) -> Optional[np.ndarray]:
+        return self._get_result("y_pred_lasso_adam")
+
+    # --------------- MSE (Test) ---------------
+    # ----- OLS -----
     @property
     def mse_ols_analytical(self) -> Optional[float]:
         return self._get_result("mse_ols_analytical")
-
-    @property
-    def mse_ridge_analytical(self) -> Optional[float]:
-        return self._get_result("mse_ridge_analytical")
 
     @property
     def mse_ols_gd(self) -> Optional[float]:
         return self._get_result("mse_ols_gd")
 
     @property
+    def mse_ols_momentum(self) -> Optional[float]:
+        return self._get_result("mse_ols_momentum")
+
+    @property
+    def mse_ols_adagrad(self) -> Optional[float]:
+        return self._get_result("mse_ols_adagrad")
+
+    @property
+    def mse_ols_rmsprop(self) -> Optional[float]:
+        return self._get_result("mse_ols_rmsprop")
+
+    @property
+    def mse_ols_adam(self) -> Optional[float]:
+        return self._get_result("mse_ols_adam")
+
+    # ----- Ridge -----
+    @property
+    def mse_ridge_analytical(self) -> Optional[float]:
+        return self._get_result("mse_ridge_analytical")
+
+    @property
     def mse_ridge_gd(self) -> Optional[float]:
         return self._get_result("mse_ridge_gd")
 
     @property
+    def mse_ridge_momentum(self) -> Optional[float]:
+        return self._get_result("mse_ridge_momentum")
+
+    @property
+    def mse_ridge_adagrad(self) -> Optional[float]:
+        return self._get_result("mse_ridge_adagrad")
+
+    @property
+    def mse_ridge_rmsprop(self) -> Optional[float]:
+        return self._get_result("mse_ridge_rmsprop")
+
+    @property
+    def mse_ridge_adam(self) -> Optional[float]:
+        return self._get_result("mse_ridge_adam")
+
+    # ----- Lasso -----
+    @property
     def mse_lasso_gd(self) -> Optional[float]:
         return self._get_result("mse_lasso_gd")
 
-    # R2 properties
+    @property
+    def mse_lasso_momentum(self) -> Optional[float]:
+        return self._get_result("mse_lasso_momentum")
+
+    @property
+    def mse_lasso_adagrad(self) -> Optional[float]:
+        return self._get_result("mse_lasso_adagrad")
+
+    @property
+    def mse_lasso_rmsprop(self) -> Optional[float]:
+        return self._get_result("mse_lasso_rmsprop")
+
+    @property
+    def mse_lasso_adam(self) -> Optional[float]:
+        return self._get_result("mse_lasso_adam")
+
+    # --------------- R² (Test) ---------------
+    # ----- OLS -----
     @property
     def r2_ols_analytical(self) -> Optional[float]:
         return self._get_result("r2_ols_analytical")
-
-    @property
-    def r2_ridge_analytical(self) -> Optional[float]:
-        return self._get_result("r2_ridge_analytical")
 
     @property
     def r2_ols_gd(self) -> Optional[float]:
         return self._get_result("r2_ols_gd")
 
     @property
+    def r2_ols_momentum(self) -> Optional[float]:
+        return self._get_result("r2_ols_momentum")
+
+    @property
+    def r2_ols_adagrad(self) -> Optional[float]:
+        return self._get_result("r2_ols_adagrad")
+
+    @property
+    def r2_ols_rmsprop(self) -> Optional[float]:
+        return self._get_result("r2_ols_rmsprop")
+
+    @property
+    def r2_ols_adam(self) -> Optional[float]:
+        return self._get_result("r2_ols_adam")
+
+    # ----- Ridge -----
+    @property
+    def r2_ridge_analytical(self) -> Optional[float]:
+        return self._get_result("r2_ridge_analytical")
+
+    @property
     def r2_ridge_gd(self) -> Optional[float]:
         return self._get_result("r2_ridge_gd")
 
     @property
+    def r2_ridge_momentum(self) -> Optional[float]:
+        return self._get_result("r2_ridge_momentum")
+
+    @property
+    def r2_ridge_adagrad(self) -> Optional[float]:
+        return self._get_result("r2_ridge_adagrad")
+
+    @property
+    def r2_ridge_rmsprop(self) -> Optional[float]:
+        return self._get_result("r2_ridge_rmsprop")
+
+    @property
+    def r2_ridge_adam(self) -> Optional[float]:
+        return self._get_result("r2_ridge_adam")
+
+    # ----- Lasso -----
+    @property
     def r2_lasso_gd(self) -> Optional[float]:
         return self._get_result("r2_lasso_gd")
 
-    # Training MSE properties
+    @property
+    def r2_lasso_momentum(self) -> Optional[float]:
+        return self._get_result("r2_lasso_momentum")
+
+    @property
+    def r2_lasso_adagrad(self) -> Optional[float]:
+        return self._get_result("r2_lasso_adagrad")
+
+    @property
+    def r2_lasso_rmsprop(self) -> Optional[float]:
+        return self._get_result("r2_lasso_rmsprop")
+
+    @property
+    def r2_lasso_adam(self) -> Optional[float]:
+        return self._get_result("r2_lasso_adam")
+
+    # --------------- Training MSE ---------------
+    # ----- OLS -----
     @property
     def train_mse_ols_analytical(self) -> Optional[float]:
         return self._get_result("train_mse_ols_analytical")
-
-    @property
-    def train_mse_ridge_analytical(self) -> Optional[float]:
-        return self._get_result("train_mse_ridge_analytical")
 
     @property
     def train_mse_ols_gd(self) -> Optional[float]:
         return self._get_result("train_mse_ols_gd")
 
     @property
+    def train_mse_ols_momentum(self) -> Optional[float]:
+        return self._get_result("train_mse_ols_momentum")
+
+    @property
+    def train_mse_ols_adagrad(self) -> Optional[float]:
+        return self._get_result("train_mse_ols_adagrad")
+
+    @property
+    def train_mse_ols_rmsprop(self) -> Optional[float]:
+        return self._get_result("train_mse_ols_rmsprop")
+
+    @property
+    def train_mse_ols_adam(self) -> Optional[float]:
+        return self._get_result("train_mse_ols_adam")
+
+    # ----- Ridge -----
+    @property
+    def train_mse_ridge_analytical(self) -> Optional[float]:
+        return self._get_result("train_mse_ridge_analytical")
+
+    @property
     def train_mse_ridge_gd(self) -> Optional[float]:
         return self._get_result("train_mse_ridge_gd")
 
     @property
+    def train_mse_ridge_momentum(self) -> Optional[float]:
+        return self._get_result("train_mse_ridge_momentum")
+
+    @property
+    def train_mse_ridge_adagrad(self) -> Optional[float]:
+        return self._get_result("train_mse_ridge_adagrad")
+
+    @property
+    def train_mse_ridge_rmsprop(self) -> Optional[float]:
+        return self._get_result("train_mse_ridge_rmsprop")
+
+    @property
+    def train_mse_ridge_adam(self) -> Optional[float]:
+        return self._get_result("train_mse_ridge_adam")
+
+    # ----- Lasso -----
+    @property
     def train_mse_lasso_gd(self) -> Optional[float]:
         return self._get_result("train_mse_lasso_gd")
 
-    # Training R2 properties
+    @property
+    def train_mse_lasso_momentum(self) -> Optional[float]:
+        return self._get_result("train_mse_lasso_momentum")
+
+    @property
+    def train_mse_lasso_adagrad(self) -> Optional[float]:
+        return self._get_result("train_mse_lasso_adagrad")
+
+    @property
+    def train_mse_lasso_rmsprop(self) -> Optional[float]:
+        return self._get_result("train_mse_lasso_rmsprop")
+
+    @property
+    def train_mse_lasso_adam(self) -> Optional[float]:
+        return self._get_result("train_mse_lasso_adam")
+
+    # --------------- Training R² ---------------
+    # ----- OLS -----
     @property
     def train_r2_ols_analytical(self) -> Optional[float]:
         return self._get_result("train_r2_ols_analytical")
-
-    @property
-    def train_r2_ridge_analytical(self) -> Optional[float]:
-        return self._get_result("train_r2_ridge_analytical")
 
     @property
     def train_r2_ols_gd(self) -> Optional[float]:
         return self._get_result("train_r2_ols_gd")
 
     @property
+    def train_r2_ols_momentum(self) -> Optional[float]:
+        return self._get_result("train_r2_ols_momentum")
+
+    @property
+    def train_r2_ols_adagrad(self) -> Optional[float]:
+        return self._get_result("train_r2_ols_adagrad")
+
+    @property
+    def train_r2_ols_rmsprop(self) -> Optional[float]:
+        return self._get_result("train_r2_ols_rmsprop")
+
+    @property
+    def train_r2_ols_adam(self) -> Optional[float]:
+        return self._get_result("train_r2_ols_adam")
+
+    # ----- Ridge -----
+    @property
+    def train_r2_ridge_analytical(self) -> Optional[float]:
+        return self._get_result("train_r2_ridge_analytical")
+
+    @property
     def train_r2_ridge_gd(self) -> Optional[float]:
         return self._get_result("train_r2_ridge_gd")
 
     @property
+    def train_r2_ridge_momentum(self) -> Optional[float]:
+        return self._get_result("train_r2_ridge_momentum")
+
+    @property
+    def train_r2_ridge_adagrad(self) -> Optional[float]:
+        return self._get_result("train_r2_ridge_adagrad")
+
+    @property
+    def train_r2_ridge_rmsprop(self) -> Optional[float]:
+        return self._get_result("train_r2_ridge_rmsprop")
+
+    @property
+    def train_r2_ridge_adam(self) -> Optional[float]:
+        return self._get_result("train_r2_ridge_adam")
+
+    # ----- Lasso -----
+    @property
     def train_r2_lasso_gd(self) -> Optional[float]:
         return self._get_result("train_r2_lasso_gd")
 
-    # History properties
+    @property
+    def train_r2_lasso_momentum(self) -> Optional[float]:
+        return self._get_result("train_r2_lasso_momentum")
+
+    @property
+    def train_r2_lasso_adagrad(self) -> Optional[float]:
+        return self._get_result("train_r2_lasso_adagrad")
+
+    @property
+    def train_r2_lasso_rmsprop(self) -> Optional[float]:
+        return self._get_result("train_r2_lasso_rmsprop")
+
+    @property
+    def train_r2_lasso_adam(self) -> Optional[float]:
+        return self._get_result("train_r2_lasso_adam")
+
+    # --------------- MSE History ---------------
+    # ----- Standard GD -----
     @property
     def ols_mse_history(self) -> Optional[list]:
         return self._get_result("ols_mse_history")
@@ -582,7 +834,7 @@ class RegressionAnalysis:
     def lasso_mse_history(self) -> Optional[list]:
         return self._get_result("lasso_mse_history")
 
-    # Optimizer MSE history properties
+    # ----- Momentum -----
     @property
     def ols_momentum_mse_history(self) -> Optional[list]:
         return self._get_result("ols_momentum_mse_history")
@@ -595,6 +847,7 @@ class RegressionAnalysis:
     def lasso_momentum_mse_history(self) -> Optional[list]:
         return self._get_result("lasso_momentum_mse_history")
 
+    # ----- AdaGrad -----
     @property
     def ols_adagrad_mse_history(self) -> Optional[list]:
         return self._get_result("ols_adagrad_mse_history")
@@ -607,6 +860,7 @@ class RegressionAnalysis:
     def lasso_adagrad_mse_history(self) -> Optional[list]:
         return self._get_result("lasso_adagrad_mse_history")
 
+    # ----- RMSprop -----
     @property
     def ols_rmsprop_mse_history(self) -> Optional[list]:
         return self._get_result("ols_rmsprop_mse_history")
@@ -619,6 +873,7 @@ class RegressionAnalysis:
     def lasso_rmsprop_mse_history(self) -> Optional[list]:
         return self._get_result("lasso_rmsprop_mse_history")
 
+    # ----- Adam -----
     @property
     def ols_adam_mse_history(self) -> Optional[list]:
         return self._get_result("ols_adam_mse_history")
@@ -630,6 +885,9 @@ class RegressionAnalysis:
     @property
     def lasso_adam_mse_history(self) -> Optional[list]:
         return self._get_result("lasso_adam_mse_history")
+
+
+
 
     # ================= UTILITY METHODS =================
     def get_train_mse(self, method="ols_analytical") -> float:
