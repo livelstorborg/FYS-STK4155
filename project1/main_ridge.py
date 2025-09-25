@@ -45,14 +45,13 @@ for N in sample_sizes:
                 data_splits[deg], degree=deg, lam=lam, eta=None, num_iters=None
             )
 
-            analysis.fit_analytical()
-            analysis.predict()
-            analysis.calculate_metrics()
+            analysis.fit_one('ridge', 'analytical')
+            analysis.fit_one('ols', 'analytical')  # Also fit OLS for comparison in plots
 
-            results_current["train_mse"].append(analysis.train_mse_ridge_analytical)
-            results_current["test_mse"].append(analysis.mse_ridge_analytical)
-            results_current["train_r2"].append(analysis.train_r2_ridge_analytical)
-            results_current["test_r2"].append(analysis.r2_ridge_analytical)
+            results_current["train_mse"].append(analysis.get_metric('ridge', 'analytical', 'train_mse'))
+            results_current["test_mse"].append(analysis.get_metric('ridge', 'analytical', 'test_mse'))
+            results_current["train_r2"].append(analysis.get_metric('ridge', 'analytical', 'train_r2'))
+            results_current["test_r2"].append(analysis.get_metric('ridge', 'analytical', 'test_r2'))
             results_current["instances"].append(analysis)
 
         results_by_lambda[lam] = results_current
