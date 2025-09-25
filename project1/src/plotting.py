@@ -301,7 +301,7 @@ def theta_evolution_lambdas(
     plt.show()
 
 
-def solution_comparison(x, solutions, sample_size, degree, lam):
+def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam, test=False):
     """
     Plot true function and model predictions from OLS and Ridge (analytical + GD).
     """
@@ -311,14 +311,19 @@ def solution_comparison(x, solutions, sample_size, degree, lam):
         y_pred_ols_gd,
         y_pred_ridge_analytical,
         y_pred_ridge_gd,
-        y_true,
+        x_plotting
     ) = solutions
 
     # --- OLS ---
     plt.figure(figsize=(10, 6))
-    plt.scatter(x, y_true, label="True function + noise")
-    plt.plot(x, y_pred_ols_analytical, label="OLS (Analytical)")
-    plt.plot(x, y_pred_ols_gd, label="OLS (GD)")
+    plt.plot(x, y_true, label="Runge function")
+    plt.scatter(x, y_noise, label="y_noise")
+    if test:
+        plt.scatter(x_plotting, y_pred_ols_analytical, label="OLS (Analytical)")
+        plt.scatter(x_plotting, y_pred_ols_gd, label="OLS (GD)")
+    else: 
+        plt.plot(x_plotting, y_pred_ols_analytical, label="OLS (Analytical)")
+        plt.plot(x_plotting, y_pred_ols_gd, label="OLS (GD)")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
@@ -327,16 +332,19 @@ def solution_comparison(x, solutions, sample_size, degree, lam):
 
     # --- Ridge ---
     plt.figure(figsize=(10, 6))
-    plt.scatter(x, y_true, label="True function + noise")
-    plt.plot(x, y_pred_ridge_analytical, label=f"Ridge (Analytical, λ={lam:.0e})")
-    plt.plot(x, y_pred_ridge_gd, label=f"Ridge (GD, λ={lam:.0e})")
+    plt.plot(x, y_true, label="Runge function")
+    plt.scatter(x, y_noise, label="y_noise")
+    if test:
+        plt.scatter(x_plotting, y_pred_ridge_analytical, label=f"Ridge (Analytical, λ={lam:.0e})")
+        plt.scatter(x_plotting, y_pred_ridge_gd, label=f"Ridge (GD, λ={lam:.0e})")
+    else:
+        plt.plot(x_plotting, y_pred_ridge_analytical, label=f"Ridge (Analytical, λ={lam:.0e})")
+        plt.plot(x_plotting, y_pred_ridge_gd, label=f"Ridge (GD, λ={lam:.0e})")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
     plt.legend(fontsize=16)
     plt.show()
-
-
 
 
 
@@ -353,11 +361,13 @@ def solution_comparison_gd(x, solutions, sample_size, degree, lam):
         y_adagrad,
         y_rmsprop,
         y_adam,
+        y_noise,
         y_true,
     ) = solutions
 
     plt.figure(figsize=(10, 6))
-    plt.scatter(x, y_true, label="True function + noise")
+    plt.plot(x, y_true, label="Runge function")
+    plt.scatter(x, y_noise, label="y_noise")
     plt.plot(x, y_analytical, label="Analytical")
     plt.plot(x, y_gd, label="Gradient Descent")
     plt.plot(x, y_momentum, label="Momentum")
