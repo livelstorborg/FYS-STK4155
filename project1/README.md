@@ -1,6 +1,5 @@
 # Project 1: Regression Analysis of Runge's Function
 
-
 ## Directory structure 
 - 'figs' : contains all figures generated
 - 'src' : 
@@ -18,23 +17,35 @@
 - uv.lock: for package management (using uv)
 - requirements.txt: for package management
 
-## Run the code 
+
+
+## Run the Code 
 ### Using uv (recommended)
-If you dont have uv, install by using pip:
-    pip install uv
+If you don't have uv, install it using pip:
+```bash
+pip install uv
+```
 
+Sync the dependencies:
+```bash
+uv sync
+```
 
-Then sync the dependencies by running:
-    uv sync
-
-
-Finally, you can run files
-    uv run main_<name>.py
-
+Run files:
+```bash
+uv run main_<name>.py
+```
 
 ### Using pip
-Install the dependencies by running:
-    pip install -r requirements.txt
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-Run files using python:
-    python3 main_<name>.py
+Run files using Python:
+```bash
+python3 main_<name>.py
+```
+
+## Description
+This project implements and compares various regression methods for fitting the Runge function f(x) = 1/(1 + 25x²). We analyze Ordinary Least Squares (OLS), Ridge regression, and Lasso regression, exploring the bias-variance tradeoff and implementing different gradient descent optimization methods.
