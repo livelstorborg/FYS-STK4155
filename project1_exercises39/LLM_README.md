@@ -1,7 +1,10 @@
 # LLM Conversation Exercise
-**Date**: [Today's date]
+**Date**: [25. September 2025]
+
 **LLM Used**: Claude (Anthropic)
+
 **Prompt**: "Hi, can you help me with this exercise? Make a prompt to your LLM of choice..."
+
 
 ## Conversation
 
