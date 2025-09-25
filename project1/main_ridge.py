@@ -9,13 +9,12 @@ from src.analysis import analyze_dependence_lambda_datapoints
 
 
 sample_sizes = [500, 1000, 10000]
-lambda_values = np.logspace(-5, 3, 8) 
+lambda_values = np.logspace(-5, 3, 8)
 all_results = {}
 
 for N in sample_sizes:
-
     x = np.linspace(-1, 1, N)
-    y_true = runge(x) + np.random.normal(0, 0.1, size=N) 
+    y_true = runge(x) + np.random.normal(0, 0.1, size=N)
     degrees = range(1, 16)
 
     # Split data once for all degrees to ensure consistency
@@ -23,47 +22,52 @@ for N in sample_sizes:
     for deg in degrees:
         X = polynomial_features(x, deg)
         X_norm, y_centered, y_mean = scale_data(X, y_true)
-        X_train, X_test, y_train, y_test, x_train, x_test = train_test_split(X_norm, y_centered, x, test_size=0.2)
-        
+        X_train, X_test, y_train, y_test, x_train, x_test = train_test_split(
+            X_norm, y_centered, x, test_size=0.2
+        )
+
         data_splits[deg] = [X_train, X_test, y_train, y_test, x_train, x_test, y_mean]
 
-
     results_by_lambda = {}
-    
-    for lam in lambda_values:
 
+    for lam in lambda_values:
         results_current = {
-            'degrees': list(degrees),
-            'train_mse': [],
-            'test_mse': [],
-            'train_r2': [],
-            'test_r2': [],
-            'instances': []
+            "degrees": list(degrees),
+            "train_mse": [],
+            "test_mse": [],
+            "train_r2": [],
+            "test_r2": [],
+            "instances": [],
         }
 
         for deg in degrees:
-            analysis = RegressionAnalysis(data_splits[deg], degree=deg, lam=lam, eta=None, num_iters=None)
-            
+            analysis = RegressionAnalysis(
+                data_splits[deg], degree=deg, lam=lam, eta=None, num_iters=None
+            )
+
             analysis.fit_analytical()
             analysis.predict()
             analysis.calculate_metrics()
-            
-            results_current['train_mse'].append(analysis.train_mse_ridge_analytical)
-            results_current['test_mse'].append(analysis.mse_ridge_analytical)
-            results_current['train_r2'].append(analysis.train_r2_ridge_analytical)
-            results_current['test_r2'].append(analysis.r2_ridge_analytical)
-            results_current['instances'].append(analysis)
-            
+
+            results_current["train_mse"].append(analysis.train_mse_ridge_analytical)
+            results_current["test_mse"].append(analysis.mse_ridge_analytical)
+            results_current["train_r2"].append(analysis.train_r2_ridge_analytical)
+            results_current["test_r2"].append(analysis.r2_ridge_analytical)
+            results_current["instances"].append(analysis)
+
         results_by_lambda[lam] = results_current
 
     all_results[N] = results_by_lambda
 
-    theta_evolution_lambdas(all_results, lambda_values, degrees, sample_size=N, include_ols=True)
+    theta_evolution_lambdas(
+        all_results, lambda_values, degrees, sample_size=N, include_ols=True
+    )
 
 
 for degree in degrees:  # Only key degrees to reduce output
-    df = analyze_dependence_lambda_datapoints(all_results, lambda_values, sample_sizes, degree)
-
+    df = analyze_dependence_lambda_datapoints(
+        all_results, lambda_values, sample_sizes, degree
+    )
 
 
 for N in sample_sizes:
