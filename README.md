@@ -14,5 +14,7 @@ The course introduces a variety of central algorithms and methods essential for 
 ## Repository Structure
 
 ### Project 1: Regression Analysis of Runge's Function
+Comparing and implementing various regression methods to fit Runge's function, including OLS, Ridge, and Lasso regression, and different gradient descent methods to find optimal parameters to approximate the target data. Measuring performance using MSE and R2 score, and analyzing bias-variance trade-off. 
+
 
 
