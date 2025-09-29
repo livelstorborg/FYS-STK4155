@@ -25,6 +25,7 @@ clean:
 	rm -f figs/mse_vs_degree_lambdas_N*.pdf
 	rm -f figs/r2_vs_degree_lambdas_N*.pdf
 	rm -f figs/theta1_evolution_lambdas_N*.pdf
+	rm -rf figs/
 
 
 help:
