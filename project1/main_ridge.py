@@ -53,8 +53,7 @@ for N in sample_sizes:
                 data_splits[deg], degree=deg, lam=lam, eta=None, num_iters=None
             )
 
-            analysis.fit_one('ridge', 'analytical')
-            analysis.fit_one('ols', 'analytical')  # Also fit OLS for comparison in plots
+            analysis.fit(models=('ridge', 'ols'), opts='analytical')
 
             results_current["train_mse"].append(analysis.get_metric('ridge', 'analytical', 'train_mse'))
             results_current["test_mse"].append(analysis.get_metric('ridge', 'analytical', 'test_mse'))

@@ -11,23 +11,23 @@ from src.regression import RegressionAnalysis
 from src.utils import polynomial_features, scale_data, runge
 
 
-sample_sizes = [500, 1000, 10000]
+sample_sizes = [50, 100, 150, 200, 300, 400, 500, 1000, 10000]
 all_results = {}
 
 for N in sample_sizes:
 
     x = np.linspace(-1, 1, N)
     np.random.seed(42)
-    random_noise = np.random.normal(0, 0.1, N)
+    random_noise = np.random.normal(0, 1, N)
     y_true = runge(x)
     y_noise = y_true + random_noise
-    degrees = range(1, 16)
+    degrees = range(1, 20)
 
     # Split data once for all degrees to ensure consistency
     data_splits = {}  # Dictionary to store splits for each degree
     for deg in degrees:
         X = polynomial_features(x, deg)
-        X_train, X_test, y_train, y_test = train_test_split(X, y_noise, test_size=0.2, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y_noise, test_size=0.3, random_state=42)
         x_train = X_train[:, 0] 
         x_test = X_test[:, 0] 
 
@@ -54,7 +54,7 @@ for N in sample_sizes:
             data_splits[deg], degree=deg, lam=0.0, eta=None, num_iters=None
         )
 
-        analysis.fit_one('ols', 'analytical')
+        analysis.fit(models='ols', opts='analytical')
 
         results_current["train_mse"].append(analysis.get_metric('ols', 'analytical', 'train_mse'))
         results_current["test_mse"].append(analysis.get_metric('ols', 'analytical', 'test_mse'))
@@ -71,7 +71,7 @@ for N in sample_sizes:
 
 
     # Further analysis for N=1000
-    if N == 1000:
+    if N == 300:
         mse_degree_ols(all_results, sample_size=N)  # MSE for N=1000 (a)
         r2_degree_ols(results_current, sample_size=N)  # R2 for N=1000 (a)
         theta_evolution_ols(
@@ -81,5 +81,4 @@ for N in sample_sizes:
 
 
 
-# Plot for multiple sample sizes
 mse_degree_multiple(all_results, sample_sizes)

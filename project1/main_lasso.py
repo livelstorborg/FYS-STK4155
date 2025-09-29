@@ -61,9 +61,7 @@ for i, lam in enumerate(lambda_values):
     )
 
     # Fit all methods for comparison
-    analysis.fit_one('ols', 'analytical')  # OLS 
-    analysis.fit_one('ridge', 'analytical')  # Ridge
-    analysis.fit_one('lasso', 'gd')  # Lasso
+    analysis.fit(models=('ols', 'ridge', 'lasso'), opts=('analytical', 'analytical', 'gd'))
 
     # Store results
     results["lambda"].append(lam)
