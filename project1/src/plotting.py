@@ -1,4 +1,8 @@
 import matplotlib.pyplot as plt
+import numpy as np
+import os
+
+os.makedirs("figs", exist_ok=True)
 
 
 def setup_plot_formatting():
@@ -301,7 +305,7 @@ def theta_evolution_lambdas(
     plt.show()
 
 
-def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam, test=False):
+def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam):
     """
     Plot true function and model predictions from OLS and Ridge (analytical + GD).
     """
@@ -314,16 +318,15 @@ def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam,
         x_plotting
     ) = solutions
 
+
+
+
     # --- OLS ---
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    plt.scatter(x, y_noise, label="y_noise")
-    if test:
-        plt.scatter(x_plotting, y_pred_ols_analytical, label="OLS (Analytical)")
-        plt.scatter(x_plotting, y_pred_ols_gd, label="OLS (GD)")
-    else: 
-        plt.plot(x_plotting, y_pred_ols_analytical, label="OLS (Analytical)")
-        plt.plot(x_plotting, y_pred_ols_gd, label="OLS (GD)")
+    plt.scatter(x, y_noise, color='white', edgecolors='lightblue', s=50, alpha=0.7, label="y_noise")
+    plt.plot(x_plotting, y_pred_ols_analytical, label="OLS (Analytical)")
+    plt.plot(x_plotting, y_pred_ols_gd, label="OLS (GD)")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
@@ -333,13 +336,10 @@ def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam,
     # --- Ridge ---
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    plt.scatter(x, y_noise, label="y_noise")
-    if test:
-        plt.scatter(x_plotting, y_pred_ridge_analytical, label=f"Ridge (Analytical, λ={lam:.0e})")
-        plt.scatter(x_plotting, y_pred_ridge_gd, label=f"Ridge (GD, λ={lam:.0e})")
-    else:
-        plt.plot(x_plotting, y_pred_ridge_analytical, label=f"Ridge (Analytical, λ={lam:.0e})")
-        plt.plot(x_plotting, y_pred_ridge_gd, label=f"Ridge (GD, λ={lam:.0e})")
+    plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label="y_noise")
+
+    plt.plot(x_plotting, y_pred_ridge_analytical, label=f"Ridge (Analytical, λ={lam:.0e})")
+    plt.plot(x_plotting, y_pred_ridge_gd, label=f"Ridge (GD, λ={lam:.0e})")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
