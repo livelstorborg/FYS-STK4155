@@ -1,4 +1,4 @@
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple, Optional, Union
 import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
 
@@ -9,12 +9,7 @@ from .utils import (
     gd_adagrad,
     gd_rmsprop,
     gd_adam,
-    # Add stochastic imports
-    stochastic_gd,
-    stochastic_gd_momentum,
-    stochastic_gd_adagrad,
-    stochastic_gd_rmsprop,
-    stochastic_gd_adam,
+    sgd,  # Add stochastic gradient descent
 )
 
 
@@ -73,18 +68,16 @@ class RegressionAnalysis:
             "adagrad": gd_adagrad,
             "rmsprop": gd_rmsprop,
             "adam": gd_adam,
-            # Stochastic optimizers
-            "sgd": stochastic_gd,
-            "sgd_momentum": stochastic_gd_momentum,
-            "sgd_adagrad": stochastic_gd_adagrad,
-            "sgd_rmsprop": stochastic_gd_rmsprop,
-            "sgd_adam": stochastic_gd_adam,
+            # Stochastic optimizers (use same functions with stochastic=True)
+            "sgd": gradient_descent,
+            "sgd_momentum": gd_momentum,
+            "sgd_adagrad": gd_adagrad,
+            "sgd_rmsprop": gd_rmsprop,
+            "sgd_adam": gd_adam,
         }
         
         # Track which optimizers are stochastic
-        self._stochastic_opts = {
-            "sgd", "sgd_momentum", "sgd_adagrad", "sgd_rmsprop", "sgd_adam"
-        }
+        self._stochastic_opts = {"sgd", "sgd_momentum", "sgd_adagrad", "sgd_rmsprop", "sgd_adam"}
 
     # ----------------- internals -----------------
 
@@ -116,104 +109,124 @@ class RegressionAnalysis:
             return False
         if opt == "analytical":
             return model in ("ols", "ridge")  # no analytical lasso
-        return opt in self._opt_fns
+        return opt in self._opt_fns or opt in self._stochastic_opts
 
     # ----------------- public API -----------------
 
-    def fit_one(self, model: str, opt: str, **opt_kwargs) -> None:
-        """
-        Fit a single (model, opt) combo.
-        model in {'ols','ridge','lasso'}
-        opt   in {'analytical','gd','momentum','adagrad','rmsprop','adam',
-                  'sgd','sgd_momentum','sgd_adagrad','sgd_rmsprop','sgd_adam'}
-        Extra optimizer-specific kwargs can be passed via **opt_kwargs.
-        """
-        if not self._valid_combo(model, opt):
-            raise ValueError(f"Invalid combo: ({model}, {opt})")
-
-        # Solve for theta
-        if opt == "analytical":
-            theta = analytical_solution(
-                self.X_train,
-                self.y_train,
-                method=model,
-                lam=(self.lam if model == "ridge" else 0.0),
-            )
-            history = None
-        elif opt in self._stochastic_opts:
-            # Stochastic optimizer - different parameter structure
-            if self.eta is None or self.n_epochs is None:
-                raise ValueError("eta and n_epochs required for stochastic methods")
-            
-            lam_arg = self.lam if model in ("ridge", "lasso") else None
-            theta, history = self._opt_fns[opt](
-                self.X_train,
-                self.y_train,
-                method=model,
-                lam=lam_arg,
-                eta=self.eta,
-                n_epochs=self.n_epochs,
-                batch_size=opt_kwargs.get("batch_size", self.batch_size),
-                random_state=opt_kwargs.get("random_state", self.random_state),
-                **{k: v for k, v in opt_kwargs.items() 
-                   if k not in ["batch_size", "random_state"]}
-            )
-        else:
-            # Full-batch optimizer - original parameter structure  
-            if self.eta is None or self.num_iters is None:
-                raise ValueError("eta and num_iters required for gradient-based methods")
-            lam_arg = self.lam if model in ("ridge", "lasso") else 0.0
-            theta, history = self._opt_fns[opt](
-                self.X_train,
-                self.y_train,
-                self.eta,
-                self.num_iters,
-                method=model,
-                lam=lam_arg,
-                **opt_kwargs,
-            )
-
-        # Metrics + predictions
-        m = self._compute_metrics(theta)
-        key = (model, opt)
-        self.runs[key] = {
-            "theta": theta,
-            "history": history,
-            "metrics": {
-                "train_mse": m["train_mse"],
-                "train_r2": m["train_r2"],
-                "test_mse": m["test_mse"],
-                "test_r2": m["test_r2"],
-            },
-            "y_pred_test": m["y_pred_test"],
-            "y_pred_train": m["y_pred_train"],
-        }
-
-    def fit_many(
+    def fit(
         self,
-        models: Optional[Tuple[str, ...]] = None,
-        opts: Optional[Tuple[str, ...]] = None,
+        models: Union[str, Tuple[str, ...], None] = None,
+        opts: Union[str, Tuple[str, ...], None] = None,
         **opt_kwargs,
     ) -> None:
         """
-        Fit a grid of (models x opts).
-        Example:
-            ra.fit_many(models=('ols','ridge','lasso'),
-                        opts=('analytical','gd','adam','sgd','sgd_adam'),
-                        beta=0.9, eps=1e-8, batch_size=64)
-        Any optimizer-specific parameters can be included in **opt_kwargs; they'll be ignored by
-        optimizers that don't use them.
+        Fit model(s) with optimizer(s). Handles both single and multiple combinations.
+        
+        Parameters
+        ----------
+        models : str or tuple of str, optional
+            Single model or tuple of models in {'ols','ridge','lasso'}
+            If None, uses all available models
+        opts : str or tuple of str, optional  
+            Single optimizer or tuple of optimizers in 
+            {'analytical','gd','momentum','adagrad','rmsprop','adam',
+            'sgd','sgd_momentum','sgd_adagrad','sgd_rmsprop','sgd_adam'}
+            If None, uses default optimizers
+        **opt_kwargs
+            Optimizer-specific parameters (e.g., beta=0.9, eps=1e-8, batch_size=64)
         """
-        models = models or self._models
-        opts = opts or ("analytical", "gd", "momentum", "adagrad", "rmsprop", "adam")
+        # Handle defaults
+        if models is None:
+            models = self._models
+        if opts is None:
+            opts = ("analytical", "gd", "momentum", "adagrad", "rmsprop", "adam")
+        
+        # Convert single strings to tuples for uniform processing
+        if isinstance(models, str):
+            models = (models,)
+        if isinstance(opts, str):
+            opts = (opts,)
+        
+        # Fit all combinations
         for model in models:
             for opt in opts:
-                if self._valid_combo(model, opt):
-                    self.fit_one(model, opt, **opt_kwargs)
+                if not self._valid_combo(model, opt):
+                    continue
+                    
+                # Solve for theta
+                if opt == "analytical":
+                    theta = analytical_solution(
+                        self.X_train,
+                        self.y_train,
+                        method=model,
+                        lam=(self.lam if model == "ridge" else 0.0),
+                    )
+                    history = None
+                elif opt in self._stochastic_opts:
+                    # Stochastic optimizer - use n_epochs instead of num_iters
+                    if self.eta is None or self.n_epochs is None:
+                        raise ValueError("eta and n_epochs required for stochastic methods")
+                    
+                    lam_arg = self.lam if model in ("ridge", "lasso") else None
+                    theta, history = self._opt_fns[opt](
+                        self.X_train,
+                        self.y_train,
+                        eta=self.eta,
+                        num_iters=self.n_epochs,  # Pass n_epochs as num_iters
+                        method=model,
+                        lam=lam_arg,
+                        stochastic=True,  # Enable stochastic mode
+                        batch_size=opt_kwargs.get("batch_size", self.batch_size),
+                        **{k: v for k, v in opt_kwargs.items() if k != "batch_size"}
+                    )
+                else:
+                    # Full-batch optimizer - original parameter structure  
+                    if self.eta is None or self.num_iters is None:
+                        raise ValueError("eta and num_iters required for gradient-based methods")
+                    lam_arg = self.lam if model in ("ridge", "lasso") else 0.0
+                    theta, history = self._opt_fns[opt](
+                        self.X_train,
+                        self.y_train,
+                        self.eta,
+                        self.num_iters,
+                        method=model,
+                        lam=lam_arg,
+                        **opt_kwargs,
+                    )
+
+                # Metrics + predictions
+                m = self._compute_metrics(theta)
+                key = (model, opt)
+                self.runs[key] = {
+                    "theta": theta,
+                    "history": history,
+                    "metrics": {
+                        "train_mse": m["train_mse"],
+                        "train_r2": m["train_r2"],
+                        "test_mse": m["test_mse"],
+                        "test_r2": m["test_r2"],
+                    },
+                    "y_pred_test": m["y_pred_test"],
+                    "y_pred_train": m["y_pred_train"],
+                }
 
     def get_metric(self, model: str, opt: str, name: str) -> float:
         """
-        name in {'train_mse','train_r2','test_mse','test_r2'}
+        Get a specific metric for a model/optimizer combination.
+        
+        Parameters
+        ----------
+        model : str
+            Model name in {'ols', 'ridge', 'lasso'}
+        opt : str
+            Optimizer name
+        name : str
+            Metric name in {'train_mse','train_r2','test_mse','test_r2'}
+        
+        Returns
+        -------
+        float
+            The requested metric value
         """
         key = (model, opt)
         if key not in self.runs:
@@ -221,17 +234,45 @@ class RegressionAnalysis:
         return self.runs[key]["metrics"][name]
 
     def get_theta(self, model: str, opt: str) -> np.ndarray:
+        """
+        Get the fitted parameters for a model/optimizer combination.
+        
+        Parameters
+        ----------
+        model : str
+            Model name in {'ols', 'ridge', 'lasso'}
+        opt : str
+            Optimizer name
+            
+        Returns
+        -------
+        np.ndarray
+            The fitted parameter vector
+        """
         key = (model, opt)
         if key not in self.runs:
             raise ValueError(f"Not fitted: {key}")
         return self.runs[key]["theta"]
 
     def fitted(self):
+        """
+        Get list of fitted (model, optimizer) combinations.
+        
+        Returns
+        -------
+        list
+            List of (model, optimizer) tuples that have been fitted
+        """
         return list(self.runs.keys())
 
     def summary(self) -> Dict[str, Dict[str, Any]]:
         """
-        Returns dict keyed by 'model+opt' like 'ols+gd' with core metrics + theta shape.
+        Get summary of all fitted models with key metrics.
+        
+        Returns
+        -------
+        dict
+            Dictionary with fitted model summaries
         """
         out: Dict[str, Dict[str, Any]] = {}
         for (model, opt), pack in self.runs.items():
