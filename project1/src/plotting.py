@@ -309,19 +309,21 @@ def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam,
     """
     Plot true function and model predictions (analytical + GD).
     """
-
-    (
-        y_pred_analytical,
-        y_pred_gd,
-        x_plotting
-    ) = solutions
-
-
+    # Check if we have analytical solution (3 items) or not (2 items for Lasso)
+    if len(solutions) == 3:
+        y_pred_analytical, y_pred_gd, x_plotting = solutions
+        has_analytical = True
+    else:
+        y_pred_gd, x_plotting = solutions
+        has_analytical = False
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
     plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
-    plt.plot(x_plotting, y_pred_analytical, label=f"Analytical, λ={lam:.0e}")
+    
+    if has_analytical:
+        plt.plot(x_plotting, y_pred_analytical, label=f"Analytical, λ={lam:.0e}")
+    
     plt.plot(x_plotting, y_pred_gd, label=f"GD, λ={lam:.0e}")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
@@ -331,27 +333,25 @@ def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam,
     plt.show()
 
 
-
-
 def solution_comparison_gd(x, y_noise, y_true, solutions, sample_size, degree, lam, title="GD Methods Comparison", test=False):
     """
     Plotting solutions using different methods for computing the optimal parameters (gradient descent).
     """
-
-    (
-        y_analytical, 
-        y_gd,
-        y_momentum,
-        y_adagrad,
-        y_rmsprop,
-        y_adam,
-        x_plotting
-    ) = solutions
+    # Check if we have analytical solution (7 items) or not (6 items for Lasso)
+    if len(solutions) == 7:
+        y_analytical, y_gd, y_momentum, y_adagrad, y_rmsprop, y_adam, x_plotting = solutions
+        has_analytical = True
+    else:
+        y_gd, y_momentum, y_adagrad, y_rmsprop, y_adam, x_plotting = solutions
+        has_analytical = False
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
     plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
-    plt.plot(x_plotting, y_analytical, label="Analytical")
+    
+    if has_analytical:
+        plt.plot(x_plotting, y_analytical, label="Analytical")
+    
     plt.plot(x_plotting, y_gd, label="Gradient Descent")
     plt.plot(x_plotting, y_momentum, label="Momentum")
     plt.plot(x_plotting, y_adagrad, label="AdaGrad")
@@ -361,29 +361,29 @@ def solution_comparison_gd(x, y_noise, y_true, solutions, sample_size, degree, l
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
     plt.legend(fontsize=16)
-    # plt.savefig()
     plt.title(title, fontsize=16)
     plt.show()
 
 
 def compare_sgd(x, y_noise, y_true, solutions, sample_size, degree, lam, title="Solution Comparison", type=None):
     """
-    Plot true function and model predictions (analytical + GD).
+    Plot true function and model predictions (analytical + GD + SGD).
     """
-
-    (
-        y_pred_analytical,
-        y_pred_gd,
-        y_pred_sgd,
-        x_plotting
-    ) = solutions
-
-
+    # Check if we have analytical solution (4 items) or not (3 items for Lasso)
+    if len(solutions) == 4:
+        y_pred_analytical, y_pred_gd, y_pred_sgd, x_plotting = solutions
+        has_analytical = True
+    else:
+        y_pred_gd, y_pred_sgd, x_plotting = solutions
+        has_analytical = False
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
     plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
-    plt.plot(x_plotting, y_pred_analytical, label=f"Analytical, λ={lam:.0e}")
+    
+    if has_analytical:
+        plt.plot(x_plotting, y_pred_analytical, label=f"Analytical, λ={lam:.0e}")
+    
     plt.plot(x_plotting, y_pred_gd, label=f"GD - {type}, λ={lam:.0e}")
     plt.plot(x_plotting, y_pred_sgd, label=f"SGD - {type}, λ={lam:.0e}")
     plt.xlabel("x", fontsize=16)
