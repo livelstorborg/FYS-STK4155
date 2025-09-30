@@ -305,51 +305,35 @@ def theta_evolution_lambdas(
     plt.show()
 
 
-def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam):
+def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam, title="Solution Comparison"):
     """
-    Plot true function and model predictions from OLS and Ridge (analytical + GD).
+    Plot true function and model predictions (analytical + GD).
     """
 
     (
-        y_pred_ols_analytical,
-        y_pred_ols_gd,
-        y_pred_ridge_analytical,
-        y_pred_ridge_gd,
+        y_pred_analytical,
+        y_pred_gd,
         x_plotting
     ) = solutions
 
 
 
-
-    # --- OLS ---
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    plt.scatter(x, y_noise, color='white', edgecolors='lightblue', s=50, alpha=0.7, label="y_noise")
-    plt.plot(x_plotting, y_pred_ols_analytical, label="OLS (Analytical)")
-    plt.plot(x_plotting, y_pred_ols_gd, label="OLS (GD)")
-    plt.xlabel("x", fontsize=16)
-    plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
-    setup_plot_formatting()
-    plt.legend()
-    plt.show()
-
-    # --- Ridge ---
-    plt.figure(figsize=(10, 6))
-    plt.plot(x, y_true, label="Runge function")
-    plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label="y_noise")
-
-    plt.plot(x_plotting, y_pred_ridge_analytical, label=f"Ridge (Analytical, λ={lam:.0e})")
-    plt.plot(x_plotting, y_pred_ridge_gd, label=f"Ridge (GD, λ={lam:.0e})")
+    plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
+    plt.plot(x_plotting, y_pred_analytical, label=f"Analytical, λ={lam:.0e}")
+    plt.plot(x_plotting, y_pred_gd, label=f"GD, λ={lam:.0e}")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
     plt.legend(fontsize=16)
+    plt.title(title, fontsize=16)
     plt.show()
 
 
 
 
-def solution_comparison_gd(x, y_noise, y_true, solutions, sample_size, degree, lam, test=False):
+def solution_comparison_gd(x, y_noise, y_true, solutions, sample_size, degree, lam, title="GD Methods Comparison", test=False):
     """
     Plotting solutions using different methods for computing the optimal parameters (gradient descent).
     """
@@ -366,26 +350,47 @@ def solution_comparison_gd(x, y_noise, y_true, solutions, sample_size, degree, l
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    plt.scatter(x, y_noise, label="y_noise")
-    if test:
-        plt.scatter(x_plotting, y_analytical, label="Analytical")
-        plt.scatter(x_plotting, y_gd, label="Gradient Descent")
-        plt.scatter(x_plotting, y_momentum, label="Momentum")
-        plt.scatter(x_plotting, y_adagrad, label="AdaGrad")
-        plt.scatter(x_plotting, y_rmsprop, label="RMSProp")
-        plt.scatter(x_plotting, y_adam, label="Adam")
-    else:
-        plt.plot(x_plotting, y_analytical, label="Analytical")
-        plt.plot(x_plotting, y_gd, label="Gradient Descent")
-        plt.plot(x_plotting, y_momentum, label="Momentum")
-        plt.plot(x_plotting, y_adagrad, label="AdaGrad")
-        plt.plot(x_plotting, y_rmsprop, label="RMSProp")
-        plt.plot(x_plotting, y_adam, label="Adam")
+    plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
+    plt.plot(x_plotting, y_analytical, label="Analytical")
+    plt.plot(x_plotting, y_gd, label="Gradient Descent")
+    plt.plot(x_plotting, y_momentum, label="Momentum")
+    plt.plot(x_plotting, y_adagrad, label="AdaGrad")
+    plt.plot(x_plotting, y_rmsprop, label="RMSProp")
+    plt.plot(x_plotting, y_adam, label="Adam")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
     plt.legend(fontsize=16)
     # plt.savefig()
+    plt.title(title, fontsize=16)
+    plt.show()
+
+
+def compare_sgd(x, y_noise, y_true, solutions, sample_size, degree, lam, title="Solution Comparison", type=None):
+    """
+    Plot true function and model predictions (analytical + GD).
+    """
+
+    (
+        y_pred_analytical,
+        y_pred_gd,
+        y_pred_sgd,
+        x_plotting
+    ) = solutions
+
+
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, y_true, label="Runge function")
+    plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
+    plt.plot(x_plotting, y_pred_analytical, label=f"Analytical, λ={lam:.0e}")
+    plt.plot(x_plotting, y_pred_gd, label=f"GD - {type}, λ={lam:.0e}")
+    plt.plot(x_plotting, y_pred_sgd, label=f"SGD - {type}, λ={lam:.0e}")
+    plt.xlabel("x", fontsize=16)
+    plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
+    setup_plot_formatting()
+    plt.legend(fontsize=16)
+    plt.title(title, fontsize=16)
     plt.show()
 
 
