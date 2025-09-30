@@ -305,53 +305,92 @@ def theta_evolution_lambdas(
     plt.show()
 
 
-def solution_comparison(x, y_noise, y_true, solutions, sample_size, degree, lam, title="Solution Comparison"):
+def compare(x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False):
     """
-    Plot true function and model predictions (analytical + GD).
+    Plot true function and model predictions (analytical/sklearn + GD).
+    
+    Parameters
+    ----------
+    type : str
+        Type of regression: 'lasso' for Lasso regression, otherwise treats as OLS/Ridge
+    test : bool
+        If True, highlights test data points in a different color
     """
-    # Check if we have analytical solution (3 items) or not (2 items for Lasso)
-    if len(solutions) == 3:
-        y_pred_analytical, y_pred_gd, x_plotting = solutions
-        has_analytical = True
+    # Use type parameter to determine what baseline to expect
+    if type == 'lasso':
+        y_scikit, y_gd, x_plotting = solutions
+        lasso = True
     else:
-        y_pred_gd, x_plotting = solutions
-        has_analytical = False
+        y_analytical, y_gd, x_plotting = solutions
+        lasso = False
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
     
-    if has_analytical:
-        plt.plot(x_plotting, y_pred_analytical, label=f"Analytical, λ={lam:.0e}")
+    if test:
+        test_mask = np.isin(x, x_plotting)
+        train_mask = ~test_mask
+        
+        plt.scatter(x[train_mask], y_noise[train_mask], color='lightgray', alpha=0.5, s=50, label=r"$y_{noise}$ (train)")
+        plt.scatter(x[test_mask], y_noise[test_mask], color='darkblue', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
+    else:
+        plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
     
-    plt.plot(x_plotting, y_pred_gd, label=f"GD, λ={lam:.0e}")
+    if lasso:
+        plt.plot(x_plotting, y_scikit, label=f"Scikit-Learn, λ={lam:.0e}")
+    else:
+        plt.plot(x_plotting, y_analytical, label=f"Analytical, λ={lam:.0e}")
+    
+    plt.plot(x_plotting, y_gd, label=f"GD, λ={lam:.0e}")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
     plt.legend(fontsize=16)
+    
+    title = f'Test split - {type if type else "Comparison"}' if test else f'Full dataset - {type if type else "Comparison"}'
     plt.title(title, fontsize=16)
     plt.show()
 
 
-def solution_comparison_gd(x, y_noise, y_true, solutions, sample_size, degree, lam, title="GD Methods Comparison", test=False):
+def compare_gd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False):
     """
     Plotting solutions using different methods for computing the optimal parameters (gradient descent).
+    
+    Parameters
+    ----------
+    test : bool
+        If True, highlights test data points in a different color
     """
-    # Check if we have analytical solution (7 items) or not (6 items for Lasso)
-    if len(solutions) == 7:
-        y_analytical, y_gd, y_momentum, y_adagrad, y_rmsprop, y_adam, x_plotting = solutions
-        has_analytical = True
+    
+    if type == 'lasso':
+        y_scikit, y_gd, y_momentum, y_adagrad, y_rmsprop, y_adam, x_plotting = solutions
+        lasso = True
     else:
-        y_gd, y_momentum, y_adagrad, y_rmsprop, y_adam, x_plotting = solutions
-        has_analytical = False
+        y_analytical, y_gd, y_momentum, y_adagrad, y_rmsprop, y_adam, x_plotting = solutions
+        lasso = False
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
     
-    if has_analytical:
+    if test:
+        # Find which points from the full dataset are NOT in the test set (i.e., training points)
+        # Create a mask for test points
+        test_mask = np.isin(x, x_plotting)
+        train_mask = ~test_mask
+        
+        # Plot training points in light gray
+        plt.scatter(x[train_mask], y_noise[train_mask], color='lightgray', alpha=0.5, s=50, label=r"$y_{noise}$ (train)")
+        # Plot test points in a different color to highlight them
+        plt.scatter(x[test_mask], y_noise[test_mask], color='darkblue', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
+    else:
+        # Plot all data points in one color
+        plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
+    
+    if lasso:
+        plt.plot(x_plotting, y_scikit, label="Scikit-Learn")
+    else:
         plt.plot(x_plotting, y_analytical, label="Analytical")
-    
+
     plt.plot(x_plotting, y_gd, label="Gradient Descent")
     plt.plot(x_plotting, y_momentum, label="Momentum")
     plt.plot(x_plotting, y_adagrad, label="AdaGrad")
@@ -360,36 +399,56 @@ def solution_comparison_gd(x, y_noise, y_true, solutions, sample_size, degree, l
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.legend(fontsize=16)
+    plt.legend(fontsize=14)
+    title = f'Test split - GD Methods {type if type else ""}' if test else f'Full dataset - GD Methods {type if type else ""}'
     plt.title(title, fontsize=16)
     plt.show()
 
 
-def compare_sgd(x, y_noise, y_true, solutions, sample_size, degree, lam, title="Solution Comparison", type=None):
+def compare_sgd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False):
     """
-    Plot true function and model predictions (analytical + GD + SGD).
+    Plot true function and model predictions (analytical/sklearn + GD + SGD).
+    
+    Parameters
+    ----------
+    type : str
+        Type of regression: 'lasso' for Lasso regression, otherwise treats as OLS/Ridge
+    test : bool
+        If True, highlights test data points in a different color
     """
-    # Check if we have analytical solution (4 items) or not (3 items for Lasso)
-    if len(solutions) == 4:
-        y_pred_analytical, y_pred_gd, y_pred_sgd, x_plotting = solutions
-        has_analytical = True
+    # Use type parameter to determine what baseline to expect
+    if type == 'lasso':
+        y_pred_sklearn, y_pred_gd, y_pred_sgd, x_plotting = solutions
+        lasso = True
     else:
-        y_pred_gd, y_pred_sgd, x_plotting = solutions
-        has_analytical = False
+        y_pred_analytical, y_pred_gd, y_pred_sgd, x_plotting = solutions
+        lasso = False
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
     
-    if has_analytical:
+    if test:
+        test_mask = np.isin(x, x_plotting)
+        train_mask = ~test_mask
+        
+        plt.scatter(x[train_mask], y_noise[train_mask], color='lightgray', alpha=0.5, s=50, label=r"$y_{noise}$ (train)")
+        plt.scatter(x[test_mask], y_noise[test_mask], color='darkblue', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
+    else:
+        plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
+    
+    if lasso:
+        plt.plot(x_plotting, y_pred_sklearn, label=f"Scikit-Learn, λ={lam:.0e}")
+    else:
         plt.plot(x_plotting, y_pred_analytical, label=f"Analytical, λ={lam:.0e}")
     
-    plt.plot(x_plotting, y_pred_gd, label=f"GD - {type}, λ={lam:.0e}")
-    plt.plot(x_plotting, y_pred_sgd, label=f"SGD - {type}, λ={lam:.0e}")
+    plt.plot(x_plotting, y_pred_gd, label=f"GD, λ={lam:.0e}")
+    plt.plot(x_plotting, y_pred_sgd, label=f"SGD, λ={lam:.0e}")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.legend(fontsize=16)
+    plt.legend(fontsize=14)
+    
+    title = f'Test split - SGD Methods {type if type else ""}' if test else f'Full dataset - SGD Methods {type if type else ""}'
     plt.title(title, fontsize=16)
     plt.show()
 
