@@ -41,7 +41,7 @@ analysis = RegressionAnalysis(
     n_epochs=n_epochs 
 )
 
-analysis.fit(models=('ols', 'ridge'), 
+analysis.fit(models=('ols', 'ridge', 'lasso'), 
             opts=('analytical', 'gd', 'momentum', 'adagrad', 'rmsprop', 'adam',
                    'sgd', 'sgd_momentum', 'sgd_adagrad', 'sgd_rmsprop', 'sgd_adam'),
             batch_size=batch_size
@@ -53,7 +53,6 @@ analysis.fit(models=('ols', 'ridge'),
 
 
 # ------------------------------- OLS & RIDGE (analytical vs gd) ---------------------------------
-# Do some analysis for finding the best lambda for ridge regression
 
 
 solutions_ols = [
@@ -68,8 +67,14 @@ solutions_ridge = [
     x        
 ]
 
+solutions_lasso = [
+    analysis.runs[('lasso', 'gd')]['y_pred_test'],
+    x        
+]
+
 solution_comparison(x, y_noise, y_true, solutions=solutions_ols, sample_size=N, degree=degree, lam=lam, title='Full dataset - OLS')
 solution_comparison(x, y_noise, y_true, solutions=solutions_ridge, sample_size=N, degree=degree, lam=lam, title='Full dataset - Ridge')
+solution_comparison(x, y_noise, y_true, solutions=solutions_lasso, sample_size=N, degree=degree, lam=lam, title='Full dataset - Lasso')
 
 
 
@@ -96,9 +101,19 @@ solutions_ridge_gd = [
     x,
 ]
 
+solutions_lasso_gd = [
+    analysis.runs[('lasso', 'gd')]['y_pred_test'],
+    analysis.runs[('lasso', 'momentum')]['y_pred_test'], 
+    analysis.runs[('lasso', 'adagrad')]['y_pred_test'],
+    analysis.runs[('lasso', 'rmsprop')]['y_pred_test'],
+    analysis.runs[('lasso', 'adam')]['y_pred_test'],
+    x,
+]
+
 
 solution_comparison_gd(x, y_noise, y_true, solutions=solutions_ols_gd, sample_size=N, degree=degree, lam=lam, title='Full dataset - OLS GD Methods', test=False)
 solution_comparison_gd(x, y_noise, y_true, solutions=solutions_ridge_gd, sample_size=N, degree=degree, lam=lam, title='Full dataset - Ridge GD Methods', test=False)
+solution_comparison_gd(x, y_noise, y_true, solutions=solutions_lasso_gd, sample_size=N, degree=degree, lam=lam, title='Full dataset - Lasso GD Methods', test=False)
 
 
 
@@ -173,7 +188,7 @@ analysis_test = RegressionAnalysis(
     full_dataset=False  
 )
 
-analysis_test.fit(models=('ols', 'ridge'), 
+analysis_test.fit(models=('ols', 'ridge', 'lasso'), 
             opts=('analytical', 'gd', 'momentum', 'adagrad', 'rmsprop', 'adam',
                    'sgd', 'sgd_momentum', 'sgd_adagrad', 'sgd_rmsprop', 'sgd_adam'),
             batch_size=batch_size
@@ -200,9 +215,14 @@ solutions_test_ridge = [
     x_test[sort_idx]  
 ]
 
+solutions_test_lasso = [
+    analysis_test.runs[('lasso', 'gd')]['y_pred_test'][sort_idx],
+    x_test[sort_idx]  
+]
+
 solution_comparison(x, y_noise, y_true, solutions=solutions_test_ols, sample_size=N, degree=degree, lam=lam, title='Test split - OLS')
 solution_comparison(x, y_noise, y_true, solutions=solutions_test_ridge, sample_size=N, degree=degree, lam=lam, title='Test split - Ridge')
-
+solution_comparison(x, y_noise, y_true, solutions=solutions_test_lasso, sample_size=N, degree=degree, lam=lam, title='Test split - Lasso')
 
 
 
@@ -238,9 +258,18 @@ solutions_test_ridge = [
     x_test[sort_idx],
 ]
 
+solutions_test_lasso = [
+    analysis_test.runs[('lasso', 'gd')]['y_pred_test'][sort_idx],
+    analysis_test.runs[('lasso', 'momentum')]['y_pred_test'][sort_idx], 
+    analysis_test.runs[('lasso', 'adagrad')]['y_pred_test'][sort_idx],
+    analysis_test.runs[('lasso', 'rmsprop')]['y_pred_test'][sort_idx],
+    analysis_test.runs[('lasso', 'adam')]['y_pred_test'][sort_idx],
+    x_test[sort_idx],
+]
+
 solution_comparison_gd(x, y_noise, y_true, solutions=solutions_test_ols, sample_size=N, degree=degree, lam=lam, title='Test split - OLS GD Methods', test=True)
 solution_comparison_gd(x, y_noise, y_true, solutions=solutions_test_ridge, sample_size=N, degree=degree, lam=lam, title='Test split - Ridge GD Methods', test=True)
-
+solution_comparison_gd(x, y_noise, y_true, solutions=solutions_test_lasso, sample_size=N, degree=degree, lam=lam, title='Test split - Lasso GD Methods', test=True)
 
 
 
@@ -248,9 +277,7 @@ solution_comparison_gd(x, y_noise, y_true, solutions=solutions_test_ridge, sampl
 
 # ----------------------------- Stochastic --------------------------------
 
-# ----------------------------- Stochastic --------------------------------
-
-# OLS
+# ----- OLS -----
 sol_test_ols_sgd = [
     analysis_test.runs[('ols', 'analytical')]['y_pred_test'][sort_idx],
     analysis_test.runs[('ols', 'gd')]['y_pred_test'][sort_idx],
