@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from src.plotting import solution_comparison, solution_comparison_gd, compare_sgd
+from src.plotting import *
 from src.regression import RegressionAnalysis
 from src.utils import polynomial_features, scale_data, runge
 
@@ -41,7 +41,7 @@ analysis = RegressionAnalysis(
     n_epochs=n_epochs 
 )
 
-analysis.fit(models=('ols', 'ridge', 'lasso'), 
+analysis.fit(models=('ols', 'ridge'), 
             opts=('analytical', 'gd', 'momentum', 'adagrad', 'rmsprop', 'adam',
                    'sgd', 'sgd_momentum', 'sgd_adagrad', 'sgd_rmsprop', 'sgd_adam'),
             batch_size=batch_size
@@ -67,14 +67,11 @@ solutions_ridge = [
     x        
 ]
 
-solutions_lasso = [
-    analysis.runs[('lasso', 'gd')]['y_pred_test'],
-    x        
-]
 
-solution_comparison(x, y_noise, y_true, solutions=solutions_ols, sample_size=N, degree=degree, lam=lam, title='Full dataset - OLS')
-solution_comparison(x, y_noise, y_true, solutions=solutions_ridge, sample_size=N, degree=degree, lam=lam, title='Full dataset - Ridge')
-solution_comparison(x, y_noise, y_true, solutions=solutions_lasso, sample_size=N, degree=degree, lam=lam, title='Full dataset - Lasso')
+
+compare(x, y_noise, y_true, solutions=solutions_ols, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
+compare(x, y_noise, y_true, solutions=solutions_ridge, sample_size=N, degree=degree, lam=lam, type='ridge', test=False)
+
 
 
 
@@ -101,19 +98,10 @@ solutions_ridge_gd = [
     x,
 ]
 
-solutions_lasso_gd = [
-    analysis.runs[('lasso', 'gd')]['y_pred_test'],
-    analysis.runs[('lasso', 'momentum')]['y_pred_test'], 
-    analysis.runs[('lasso', 'adagrad')]['y_pred_test'],
-    analysis.runs[('lasso', 'rmsprop')]['y_pred_test'],
-    analysis.runs[('lasso', 'adam')]['y_pred_test'],
-    x,
-]
 
 
-solution_comparison_gd(x, y_noise, y_true, solutions=solutions_ols_gd, sample_size=N, degree=degree, lam=lam, title='Full dataset - OLS GD Methods', test=False)
-solution_comparison_gd(x, y_noise, y_true, solutions=solutions_ridge_gd, sample_size=N, degree=degree, lam=lam, title='Full dataset - Ridge GD Methods', test=False)
-solution_comparison_gd(x, y_noise, y_true, solutions=solutions_lasso_gd, sample_size=N, degree=degree, lam=lam, title='Full dataset - Lasso GD Methods', test=False)
+compare_gd(x, y_noise, y_true, solutions=solutions_ols_gd, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
+compare_gd(x, y_noise, y_true, solutions=solutions_ridge_gd, sample_size=N, degree=degree, lam=lam, type='ridge', test=False)
 
 
 
@@ -155,11 +143,11 @@ sol_ols_sgd_adam = [
     x 
 ]
 
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd, sample_size=N, degree=degree, lam=lam, title='Full dataset - OLS SGD', type=None)
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_momentum, sample_size=N, degree=degree, lam=lam, title='Full dataset - OLS SGD Momentum', type='Momentum')
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_adagrad, sample_size=N, degree=degree, lam=lam, title='Full dataset - OLS SGD Adagrad', type='Adagrad')
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_rmsprop, sample_size=N, degree=degree, lam=lam, title='Full dataset - OLS SGD RMSprop', type='RMSprop')
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_adam, sample_size=N, degree=degree, lam=lam, title='Full dataset - OLS SGD Adam', type='Adam')
+compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
+compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_momentum, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
+compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_adagrad, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
+compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_rmsprop, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
+compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_adam, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
 
 
 
@@ -188,7 +176,7 @@ analysis_test = RegressionAnalysis(
     full_dataset=False  
 )
 
-analysis_test.fit(models=('ols', 'ridge', 'lasso'), 
+analysis_test.fit(models=('ols', 'ridge'), 
             opts=('analytical', 'gd', 'momentum', 'adagrad', 'rmsprop', 'adam',
                    'sgd', 'sgd_momentum', 'sgd_adagrad', 'sgd_rmsprop', 'sgd_adam'),
             batch_size=batch_size
@@ -215,14 +203,9 @@ solutions_test_ridge = [
     x_test[sort_idx]  
 ]
 
-solutions_test_lasso = [
-    analysis_test.runs[('lasso', 'gd')]['y_pred_test'][sort_idx],
-    x_test[sort_idx]  
-]
 
-solution_comparison(x, y_noise, y_true, solutions=solutions_test_ols, sample_size=N, degree=degree, lam=lam, title='Test split - OLS')
-solution_comparison(x, y_noise, y_true, solutions=solutions_test_ridge, sample_size=N, degree=degree, lam=lam, title='Test split - Ridge')
-solution_comparison(x, y_noise, y_true, solutions=solutions_test_lasso, sample_size=N, degree=degree, lam=lam, title='Test split - Lasso')
+compare(x, y_noise, y_true, solutions=solutions_test_ols, sample_size=N, degree=degree, lam=lam, type='ols')
+compare(x, y_noise, y_true, solutions=solutions_test_ridge, sample_size=N, degree=degree, lam=lam, type='ridge')
 
 
 
@@ -258,18 +241,10 @@ solutions_test_ridge = [
     x_test[sort_idx],
 ]
 
-solutions_test_lasso = [
-    analysis_test.runs[('lasso', 'gd')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('lasso', 'momentum')]['y_pred_test'][sort_idx], 
-    analysis_test.runs[('lasso', 'adagrad')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('lasso', 'rmsprop')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('lasso', 'adam')]['y_pred_test'][sort_idx],
-    x_test[sort_idx],
-]
 
-solution_comparison_gd(x, y_noise, y_true, solutions=solutions_test_ols, sample_size=N, degree=degree, lam=lam, title='Test split - OLS GD Methods', test=True)
-solution_comparison_gd(x, y_noise, y_true, solutions=solutions_test_ridge, sample_size=N, degree=degree, lam=lam, title='Test split - Ridge GD Methods', test=True)
-solution_comparison_gd(x, y_noise, y_true, solutions=solutions_test_lasso, sample_size=N, degree=degree, lam=lam, title='Test split - Lasso GD Methods', test=True)
+
+compare_gd(x, y_noise, y_true, solutions=solutions_test_ols, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
+compare_gd(x, y_noise, y_true, solutions=solutions_test_ridge, sample_size=N, degree=degree, lam=lam, type='ridge', test=True)
 
 
 
@@ -313,11 +288,11 @@ sol_test_ols_sgd_adam = [
     x_test[sort_idx]
 ]
 
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd, sample_size=N, degree=degree, lam=lam, title='Test split - OLS SGD', type=None)
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_momentum, sample_size=N, degree=degree, lam=lam, title='Test split - OLS SGD Momentum', type='Momentum')
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_adagrad, sample_size=N, degree=degree, lam=lam, title='Test split - OLS SGD Adagrad', type='Adagrad')
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_rmsprop, sample_size=N, degree=degree, lam=lam, title='Test split - OLS SGD RMSprop', type='RMSprop')
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_adam, sample_size=N, degree=degree, lam=lam, title='Test split - OLS SGD Adam', type='Adam')
+compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
+compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_momentum, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
+compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_adagrad, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
+compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_rmsprop, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
+compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_adam, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
 
 
 
