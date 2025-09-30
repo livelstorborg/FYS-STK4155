@@ -1,6 +1,12 @@
 import numpy as np
 from sklearn.metrics import mean_squared_error
+from sklearn.utils import resample
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
 
+
+from sklearn.model_selection import KFold
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
 
 def runge(x):
     """Runge function: f(x) = 1 / (1 + 25x^2)"""
@@ -702,6 +708,32 @@ def gd_adam(
                 break
 
     return theta, mse_history
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
