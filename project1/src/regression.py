@@ -8,8 +8,7 @@ from .utils import (
     gd_momentum,
     gd_adagrad,
     gd_rmsprop,
-    gd_adam,
-    sgd,  # Add stochastic gradient descent
+    gd_adam
 )
 
 
