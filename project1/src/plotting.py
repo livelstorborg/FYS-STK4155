@@ -332,7 +332,7 @@ def compare(x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, 
         train_mask = ~test_mask
         
         plt.scatter(x[train_mask], y_noise[train_mask], color='lightgray', alpha=0.5, s=50, label=r"$y_{noise}$ (train)")
-        plt.scatter(x[test_mask], y_noise[test_mask], color='darkblue', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
+        plt.scatter(x[test_mask], y_noise[test_mask], color='dimgray', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
     else:
         plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
     
@@ -381,7 +381,7 @@ def compare_gd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=Non
         # Plot training points in light gray
         plt.scatter(x[train_mask], y_noise[train_mask], color='lightgray', alpha=0.5, s=50, label=r"$y_{noise}$ (train)")
         # Plot test points in a different color to highlight them
-        plt.scatter(x[test_mask], y_noise[test_mask], color='darkblue', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
+        plt.scatter(x[test_mask], y_noise[test_mask], color='dimgray', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
     else:
         # Plot all data points in one color
         plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
@@ -432,7 +432,7 @@ def compare_sgd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=No
         train_mask = ~test_mask
         
         plt.scatter(x[train_mask], y_noise[train_mask], color='lightgray', alpha=0.5, s=50, label=r"$y_{noise}$ (train)")
-        plt.scatter(x[test_mask], y_noise[test_mask], color='darkblue', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
+        plt.scatter(x[test_mask], y_noise[test_mask], color='dimgray', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
     else:
         plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
     
