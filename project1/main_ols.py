@@ -18,10 +18,10 @@ for N in sample_sizes:
 
     x = np.linspace(-1, 1, N)
     np.random.seed(42)
-    random_noise = np.random.normal(0, 1, N)
+    random_noise = np.random.normal(0, 0.1, N)
     y_true = runge(x)
     y_noise = y_true + random_noise
-    degrees = range(1, 20)
+    degrees = range(1, 50)
 
     # Split data once for all degrees to ensure consistency
     data_splits = {}  # Dictionary to store splits for each degree
