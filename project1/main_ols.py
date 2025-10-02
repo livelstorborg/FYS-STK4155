@@ -13,12 +13,10 @@ from src.utils import polynomial_features, scale_data, runge
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-np.random.seed(42)
 
-SAMPLE_SIZES = [35, 50, 100, 200, 300, 350, 500, 1000]
+
+SAMPLE_SIZES = [34, 50, 100, 200, 300, 350, 500, 1000]
 DEGREES = range(1, 16)
-TEST_SIZE = 0.3
-NOISE_STD = 0.1
 PLOT_SAMPLE_SIZE = 50  # Sample size for individual plots
 
 
@@ -29,8 +27,9 @@ all_results = {}
 
 for N in SAMPLE_SIZES:
     # Generate data
+    np.random.seed(42)
     x = np.linspace(-1, 1, N)
-    random_noise = np.random.normal(0, NOISE_STD, N)
+    random_noise = np.random.normal(0, 0.1, N)
     y_true = runge(x)
     y_noise = y_true + random_noise
     
@@ -39,7 +38,7 @@ for N in SAMPLE_SIZES:
     for deg in DEGREES:
         X = polynomial_features(x, deg)
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y_noise, test_size=TEST_SIZE, random_state=42
+            X, y_noise, test_size=0.25, random_state=42
         )
         
         # Scale data
@@ -75,12 +74,15 @@ for N in SAMPLE_SIZES:
     all_results[N] = results_current
 
 
+    if N == 50: 
+        mse_degree_ols(all_results, sample_size=N)
+        r2_degree_ols(results_current, sample_size=N)
+
+
 # ============================================================================
 # INDIVIDUAL PLOTS FOR SPECIFIC SAMPLE SIZE
 # ============================================================================
-if PLOT_SAMPLE_SIZE in all_results:
-    mse_degree_ols(all_results, sample_size=PLOT_SAMPLE_SIZE)
-    r2_degree_ols(all_results[PLOT_SAMPLE_SIZE], sample_size=PLOT_SAMPLE_SIZE)
+
 
 
 # ============================================================================
