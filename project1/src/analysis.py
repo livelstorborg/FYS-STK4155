@@ -5,122 +5,13 @@ from .utils import polynomial_features, scale_data
 from .regression import RegressionAnalysis
 
 
-def analyze_mse_vs_degree(x, y, degrees, test_size=0.2, random_state=42, **kwargs):
-    """
-    Analyze MSE vs polynomial degree for both training and test sets.
-
-    Parameters
-    ----------
-    x : np.ndarray
-        Input x values
-    y : np.ndarray
-        True y values (Runge function)
-    degrees : list or range
-        Polynomial degrees to analyze
-    test_size : float, optional
-        Fraction of data to use for testing (default: 0.2)
-    random_state : int, optional
-        Random state for train/test split (default: 42)
-    **kwargs : dict
-        Additional parameters for RegressionAnalysis
-
-    Returns
-    -------
-    results : dict
-        Dictionary containing MSE results and analysis instances
-    """
-
-    # Storage for results
-    train_mse_list = []
-    test_mse_list = []
-    analysis_instances = []
-
-    print("Analyzing MSE vs Polynomial Degree...")
-    print("-" * 50)
-
-    for degree in degrees:
-        print(f"Processing degree {degree}...")
-
-        # Create data splits for this degree
-        X = polynomial_features(x, degree)
-        X_norm, y_centered, y_mean = scale_data(X, y)
-        X_train, X_test, y_train, y_test, x_train, x_test = train_test_split(
-            X_norm, y_centered, x, test_size=test_size, random_state=random_state
-        )
-
-        data = [X_train, X_test, y_train, y_test, x_train, x_test, y_mean]
-
-        # Create analysis instance for this degree
-        analysis = RegressionAnalysis(data, degree=degree, **kwargs)
-
-        # Fit analytical OLS solution
-        analysis.fit_analytical()
-        analysis.predict()
-        analysis.calculate_metrics()
-
-        # Get training MSE
-        train_mse = analysis.get_train_mse(method="ols_analytical")
-
-        # Store results
-        train_mse_list.append(train_mse)
-        test_mse_list.append(analysis.mse_ols_analytical)
-        analysis_instances.append(analysis)
-
-        print(
-            f"  Train MSE: {train_mse:.6f}, Test MSE: {analysis.mse_ols_analytical:.6f}"
-        )
-
-    return {
-        "degrees": list(degrees),
-        "train_mse": train_mse_list,
-        "test_mse": test_mse_list,
-        "instances": analysis_instances,
-    }
 
 
-def compare_methods(analysis_instance, methods=["ols_analytical", "ridge_analytical"]):
-    """
-    Compare different regression methods using a single analysis instance.
-
-    Parameters
-    ----------
-    analysis_instance : RegressionAnalysis
-        Analysis instance with fitted models
-    methods : list
-        List of methods to compare
-
-    Returns
-    -------
-    dict
-        Comparison results
-    """
-
-    results = {}
-
-    for method in methods:
-        train_mse = analysis_instance.get_train_mse(method)
-
-        # Get test MSE
-        if method == "ols_analytical":
-            test_mse = analysis_instance.mse_ols_analytical
-            r2 = analysis_instance.r2_ols_analytical
-        elif method == "ridge_analytical":
-            test_mse = analysis_instance.mse_ridge_analytical
-            r2 = analysis_instance.r2_ridge_analytical
-        elif method == "ols_gd":
-            test_mse = analysis_instance.mse_ols_gd
-            r2 = analysis_instance.r2_ols_gd
-        elif method == "ridge_gd":
-            test_mse = analysis_instance.mse_ridge_gd
-            r2 = analysis_instance.r2_ridge_gd
-
-        results[method] = {"train_mse": train_mse, "test_mse": test_mse, "r2": r2}
-
-    return results
 
 
-def analyze_dependence_datapoints():
-    pass
+
+
+
 
 
 def analyze_dependence_lambda_datapoints(

@@ -34,7 +34,7 @@ data = [X_norm, y_centered, y_mean]
 analysis = RegressionAnalysis(
     data, 
     degree=degree, 
-    lam=lam, eta=eta, 
+    lam=lam, eta=1e-3, 
     num_iters=num_iters,
     full_dataset=True, 
     batch_size=batch_size,
