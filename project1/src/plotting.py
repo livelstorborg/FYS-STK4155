@@ -51,8 +51,14 @@ def mse_degree_ols(results_dict, sample_size):
         linewidth=2,
         markersize=6,
     )
+
+    min_test_mse = min(results["test_mse"])
+    min_degree = results["degrees"][results["test_mse"].index(min_test_mse)]
+    plt.plot(min_degree, min_test_mse, 'rx', markersize=12, markeredgewidth=2, 
+         label=f'Min Test MSE: {min_test_mse:.2f}') 
+    
     plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(f"MSE, N = {sample_size}", fontsize=16)
+    plt.ylabel(f"MSE", fontsize=16)
     setup_plot_formatting()
     plt.savefig("figs/mse_vs_degree_ols.pdf")
     plt.show()
@@ -86,14 +92,22 @@ def r2_degree_ols(results, sample_size):
         linewidth=2,
         markersize=6,
     )
+
+
+
+    max_test_r2 = max(results["test_r2"])
+    max_degree = results["degrees"][results["test_r2"].index(max_test_r2)]
+
+    plt.plot(max_degree, max_test_r2, 'rx', markersize=12, markeredgewidth=2, 
+         label=f'Max Test R²: {max_test_r2:.2f}')
     plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(f"R², N = {sample_size}", fontsize=16)
+    plt.ylabel(f"R²", fontsize=16)
     setup_plot_formatting()
     plt.savefig("figs/r2_vs_degree_ols.pdf")
     plt.show()
 
 
-def theta_evolution_ols(degrees, theta1_evolution, sample_size):
+def theta_evolution_ols(degrees, theta_norms, sample_size):
     """
     Plot the evolution of the first parameter (theta1) across polynomial degrees.
 
@@ -107,11 +121,12 @@ def theta_evolution_ols(degrees, theta1_evolution, sample_size):
         Sample size for labeling
     """
     plt.figure(figsize=(8, 6))
-    plt.plot(degrees, theta1_evolution, "o-", linewidth=2, markersize=6)
+    plt.plot(degrees, theta_norms, "o-", linewidth=2, markersize=6)
     plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(f"Evolution of $\\theta_1$, N = {sample_size}", fontsize=16)
+    plt.ylabel(r"$\|\theta\|_2$", fontsize=16)
+    plt.yscale('log')  # Usually helpful since norms can grow exponentially
     setup_plot_formatting()
-    plt.savefig("figs/theta1_vs_degree_ols.pdf")
+    plt.savefig("figs/theta_vs_degree_ols.pdf")
     plt.show()
 
 
@@ -133,84 +148,26 @@ def mse_degree_multiple(results_dict, sample_sizes):
         plt.plot(
             results["degrees"],
             results["test_mse"],
-            "o-",
-            label=f"N = {N}",
+            label=f"Datasize = {N}",
             linewidth=2,
             markersize=6,
         )
 
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel("MSE (Test)", fontsize=16)
-    plt.yscale("log")  # often useful for error plots
+    # plt.yscale("log")  # often useful for error plots
     setup_plot_formatting()
     plt.savefig("figs/mse_vs_degree_multiple_samples_ols.pdf")
     plt.show()
 
 
-# Exercise 1b)
-def mse_degree_ridge(results_dict, lam, sample_size):
-    """Plot train vs test MSE for Ridge regression with specific lambda."""
-    results = results_dict[lam]
-
-    plt.figure(figsize=(8, 6))
-    plt.plot(
-        results["degrees"],
-        results["train_mse"],
-        "o-",
-        label="MSE (train)",
-        linewidth=2,
-        markersize=6,
-    )
-    plt.plot(
-        results["degrees"],
-        results["test_mse"],
-        "o-",
-        label="MSE (test)",
-        linewidth=2,
-        markersize=6,
-    )
-    plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(f"MSE, N = {sample_size}", fontsize=16)
-    setup_plot_formatting()
-    plt.savefig(f"figs/mse_vs_degree_ridge_lambda_{lam:.1e}_N{sample_size}.pdf")
-    plt.show()
 
 
-def r2_degree_ridge(results, sample_size):
-    """Plot R² for Ridge regression."""
-    plt.figure(figsize=(8, 6))
-    plt.plot(
-        results["degrees"],
-        results["train_r2"],
-        "o-",
-        label="R² (train)",
-        linewidth=2,
-        markersize=6,
-    )
-    plt.plot(
-        results["degrees"],
-        results["test_r2"],
-        "o-",
-        label="R² (test)",
-        linewidth=2,
-        markersize=6,
-    )
-    plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(f"R², N = {sample_size}", fontsize=16)
-    setup_plot_formatting()
-    plt.savefig(f"figs/r2_vs_degree_ridge_N{sample_size}.pdf")
-    plt.show()
 
 
-def theta_evolution_ridge(degrees, theta1_evolution, lam, sample_size):
-    """Plot theta1 evolution for Ridge regression."""
-    plt.figure(figsize=(8, 6))
-    plt.plot(degrees, theta1_evolution, "o-", linewidth=2, markersize=6)
-    plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(f"Evolution of $\\theta_1$, N = {sample_size}", fontsize=16)
-    setup_plot_formatting()
-    plt.savefig(f"figs/theta1_evolution_ridge_lambda_{lam:.1e}_N{sample_size}.pdf")
-    plt.show()
+
+
+
 
 
 def mse_degree_lambdas(results_dict, lambda_values, sample_size):
@@ -453,8 +410,3 @@ def compare_sgd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=No
     plt.show()
 
 
-def optimizer_comparison():
-    pass
-
-def method_comparison():
-    pass

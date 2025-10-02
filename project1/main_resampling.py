@@ -1,307 +1,385 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split, KFold
+import numpy as np
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.pipeline import make_pipeline
 from sklearn.utils import resample
-from sklearn.linear_model import Ridge, Lasso
+from src.utils import runge
 
-from src.utils import polynomial_features, scale_data, runge, OLS_parameters
-from src.plotting import setup_plot_formatting
 
-# Set random seed for reproducibility
-np.random.seed(42)
 
-# Parameters
-N = 300
-degrees = range(1, 16)
-n_bootstrap = 100
-n_cv_folds = 5
-lambda_ridge = 1e-5
+# def plot_error_vs_degree(degrees, errors, biases=None, variances=None, method_name='', logscale=True):
+#     """
+#     Plot error vs polynomial degree.
+    
+#     Parameters:
+#     -----------
+#     degrees : array-like
+#         Polynomial degrees
+#     errors : array-like
+#         Error/MSE values
+#     biases : array-like, optional
+#         Bias² values (only for bootstrap)
+#     variances : array-like, optional
+#         Variance values (only for bootstrap)
+#     method_name : str
+#         Method name for title (e.g., 'OLS', 'Ridge')
+#     logscale : bool
+#         Use log scale for y-axis
+#     """
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(degrees, errors, label='Error/MSE', linewidth=2)
+    
+#     if biases is not None:
+#         plt.plot(degrees, biases, label='Bias²', linewidth=2)
+#     if variances is not None:
+#         plt.plot(degrees, variances, label='Variance', linewidth=2)
+    
+#     if logscale:
+#         plt.yscale('log')
+    
+#     plt.xlabel('Polynomial Degree', fontsize=12)
+#     plt.ylabel('Error', fontsize=12)
+#     plt.title(f'Error vs Polynomial Degree ({method_name})', fontsize=14)
+#     plt.legend(fontsize=11)
+#     plt.grid(True, alpha=0.3)
+#     plt.tight_layout()
+#     plt.show()
 
-# Generate data
-x = np.linspace(-1, 1, N)
-random_noise = np.random.normal(0, 0.1, N)
-y_true = runge(x)
-y_noise = y_true + random_noise
-sigma_squared = 0.01  # Known noise variance (0.1^2)
 
-print(f"Generated {N} data points with noise std = 0.1")
-print(f"True noise variance σ² = {sigma_squared}")
+# def plot_error_vs_datasize(N_list, errors, biases=None, variances=None, degree=None, method_name='', logscale=False):
+#     """
+#     Plot error vs dataset size.
+    
+#     Parameters:
+#     -----------
+#     N_list : array-like
+#         Dataset sizes
+#     errors : array-like
+#         Error/MSE values
+#     biases : array-like, optional
+#         Bias² values (only for bootstrap)
+#     variances : array-like, optional
+#         Variance values (only for bootstrap)
+#     degree : int, optional
+#         Polynomial degree used
+#     method_name : str
+#         Method name for title (e.g., 'OLS', 'Ridge')
+#     logscale : bool
+#         Use log scale for y-axis
+#     """
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(N_list, errors, marker='o', label='Error/MSE', linewidth=2)
+    
+#     if biases is not None:
+#         plt.plot(N_list, biases, marker='s', label='Bias²', linewidth=2)
+#     if variances is not None:
+#         plt.plot(N_list, variances, marker='^', label='Variance', linewidth=2)
+    
+#     if logscale:
+#         plt.yscale('log')
+    
+#     plt.xlabel('Dataset Size (N)', fontsize=12)
+#     plt.ylabel('Error', fontsize=12)
+    
+#     title = f'Error vs Dataset Size ({method_name})'
+#     if degree is not None:
+#         title += f' (Degree={degree})'
+#     plt.title(title, fontsize=14)
+    
+#     plt.legend(fontsize=11)
+#     plt.grid(True, alpha=0.3)
+#     plt.tight_layout()
+#     plt.show()
 
-# Split data into train/test for consistent evaluation
-X_temp = polynomial_features(x, 1)  # Just for splitting
-X_train_idx, X_test_idx, _, _ = train_test_split(
-    X_temp, y_noise, test_size=0.2, random_state=42
-)
 
-# Get the actual indices for splitting
-train_indices = np.arange(len(x))[: len(X_train_idx)]
-test_indices = np.arange(len(x))[len(X_train_idx) :]
 
-# Split the original data
-x_train = x[train_indices]
-x_test = x[test_indices]
-y_train = y_noise[train_indices]
-y_test = y_noise[test_indices]
 
-print(f"Train size: {len(x_train)}, Test size: {len(x_test)}")
 
-# Storage for results
-# Part 1: MSE vs degree (like Hastie Fig 2.11)
-mse_train = np.zeros(len(degrees))
-mse_test = np.zeros(len(degrees))
+# def bootstrap_analysis(x_train, y_train, x_test, y_test, degree, method='ols', lam=0.0, n_bootstraps=100):
+#     """
+#     Perform bootstrap analysis for bias-variance trade-off.
+    
+#     Parameters:
+#     -----------
+#     x_train, y_train : Training data
+#     x_test, y_test : Test data
+#     degree : Polynomial degree
+#     method : 'ols', 'ridge', or 'lasso'
+#     lam : Regularization parameter (for ridge/lasso)
+#     n_bootstraps : Number of bootstrap samples
+    
+#     Returns:
+#     --------
+#     error, bias, variance : float
+#     """
+#     # Select model
+#     if method.lower() == 'ols':
+#         model = make_pipeline(PolynomialFeatures(degree=degree), 
+#                             LinearRegression(fit_intercept=False))
+#     elif method.lower() == 'ridge':
+#         model = make_pipeline(PolynomialFeatures(degree=degree), 
+#                             Ridge(alpha=lam, fit_intercept=False))
+#     elif method.lower() == 'lasso':
+#         model = make_pipeline(PolynomialFeatures(degree=degree), 
+#                             Lasso(alpha=lam, fit_intercept=False, max_iter=10000))
+#     else:
+#         raise ValueError(f"Unknown method: {method}. Use 'ols', 'ridge', or 'lasso'")
+    
+#     # Bootstrap predictions
+#     y_pred = np.empty((y_test.shape[0], n_bootstraps))
+#     for i in range(n_bootstraps):
+#         x_, y_ = resample(x_train, y_train)
+#         y_pred[:, i] = model.fit(x_, y_).predict(x_test).ravel()
+    
+#     # Calculate metrics
+#     error = np.mean(np.mean((y_test - y_pred)**2, axis=1, keepdims=True))
+#     bias = np.mean((y_test - np.mean(y_pred, axis=1, keepdims=True))**2)
+#     variance = np.mean(np.var(y_pred, axis=1, keepdims=True))
 
-# Part 2: Bias-variance decomposition
-bias_squared = np.zeros(len(degrees))
-variance = np.zeros(len(degrees))
-total_error = np.zeros(len(degrees))
-observed_test_error = np.zeros(len(degrees))
+#     return error, bias, variance
 
-# Part 3: Cross-validation
-cv_errors = np.zeros(len(degrees))
 
-print("\nStarting analysis...")
-print("=" * 50)
+# def cv_sklearn(x, y, degree, k_folds=5, method='ols', lam=0.01):
+#     """
+#     Perform k-fold cross-validation using sklearn's cross_val_score.
+    
+#     Parameters:
+#     -----------
+#     x, y : Full dataset
+#     degree : Polynomial degree
+#     k_folds : Number of folds
+#     method : 'ols', 'ridge', or 'lasso'
+#     lam : Regularization parameter (for ridge/lasso)
+    
+#     Returns:
+#     --------
+#     mse_mean : Mean MSE across folds
+#     mse_std : Standard deviation of MSE across folds
+#     mse_folds : Array of MSE for each fold
+#     """
+#     # Select model
+#     if method.lower() == 'ols':
+#         model = LinearRegression(fit_intercept=False)
+#     elif method.lower() == 'ridge':
+#         model = Ridge(alpha=lam, fit_intercept=False)
+#     elif method.lower() == 'lasso':
+#         model = Lasso(alpha=lam, fit_intercept=False, max_iter=10000)
+#     else:
+#         raise ValueError(f"Unknown method: {method}. Use 'ols', 'ridge', or 'lasso'")
+    
+#     # Create polynomial features
+#     poly = PolynomialFeatures(degree=degree)
+#     X = poly.fit_transform(x.reshape(-1, 1))
+    
+#     # Initialize KFold
+#     kfold = KFold(n_splits=k_folds, shuffle=True, random_state=42)
+    
+#     # Perform cross-validation
+#     scores = cross_val_score(model, X, y, 
+#                             scoring='neg_mean_squared_error', 
+#                             cv=kfold)
+    
+#     # Convert negative MSE to positive
+#     mse_folds = -scores
+    
+#     return np.mean(mse_folds), np.std(mse_folds), mse_folds
 
-# Main analysis loop
-for i, degree in enumerate(degrees):
-    print(f"Processing polynomial degree {degree}...")
 
-    # Create polynomial features for this degree
-    X_train_deg = polynomial_features(x_train, degree)
-    X_test_deg = polynomial_features(x_test, degree)
 
-    # === PART 1: Basic MSE Analysis (Hastie Fig 2.11 style) ===
-    # Scale data
-    X_train_s, y_train_s, X_mean, X_std, y_mean = scale_data(X_train_deg, y_train)
-    X_test_s, y_test_s, _, _, _ = scale_data(X_test_deg, y_test, X_mean, X_std, y_mean)
 
-    # Fit OLS
-    theta = OLS_parameters(X_train_s, y_train_s)
 
-    # Make predictions (unscale)
-    y_pred_train = X_train_s @ theta + y_mean
-    y_pred_test = X_test_s @ theta + y_mean
 
-    # Compute MSE
-    mse_train[i] = np.mean((y_train - y_pred_train) ** 2)
-    mse_test[i] = np.mean((y_test - y_pred_test) ** 2)
 
-    # === PART 2: Bootstrap Bias-Variance Analysis ===
-    # Store predictions from each bootstrap sample
-    bootstrap_predictions = np.zeros((n_bootstrap, len(x_test)))
 
-    for b in range(n_bootstrap):
-        # Create bootstrap sample from training data
-        boot_indices = np.random.choice(len(x_train), size=len(x_train), replace=True)
-        X_boot = X_train_deg[boot_indices]
-        y_boot = y_train[boot_indices]
 
-        # Scale bootstrap data
-        X_boot_s, y_boot_s, X_mean_boot, X_std_boot, y_mean_boot = scale_data(
-            X_boot, y_boot
-        )
 
-        # Scale test data using bootstrap scaling parameters
-        X_test_s_boot = (X_test_deg - X_mean_boot) / X_std_boot
 
-        # Fit OLS on bootstrap sample
-        try:
-            theta_boot = OLS_parameters(X_boot_s, y_boot_s)
-            # Make predictions on test set
-            bootstrap_predictions[b, :] = X_test_s_boot @ theta_boot + y_mean_boot
-        except np.linalg.LinAlgError:
-            # Handle singular matrix (rare for reasonable degrees)
-            print(f"  Warning: Singular matrix for degree {degree}, bootstrap {b}")
-            bootstrap_predictions[b, :] = np.mean(y_boot)  # Fallback to mean
 
-    # Compute bias-variance decomposition
-    y_true_test_points = runge(x_test)  # True function values at test points
-    mean_prediction = np.mean(bootstrap_predictions, axis=0)
 
-    # Bias² = (E[ỹ] - f(x))²
-    bias_squared[i] = np.mean((mean_prediction - y_true_test_points) ** 2)
 
-    # Variance = E[(ỹ - E[ỹ])²]
-    variance[i] = np.mean(np.var(bootstrap_predictions, axis=0))
 
-    # Total expected error = Bias² + Variance + σ²
-    total_error[i] = bias_squared[i] + variance[i] + sigma_squared
 
-    # Observed test error (should approximately match total_error)
-    observed_test_error[i] = np.mean((mean_prediction - y_test) ** 2)
+# np.random.seed(42)
 
-    # === PART 3: Cross-Validation ===
-    kf = KFold(n_splits=n_cv_folds, shuffle=True, random_state=42)
-    cv_scores = []
 
-    for train_idx, val_idx in kf.split(X_train_deg):
-        X_cv_train, X_cv_val = X_train_deg[train_idx], X_train_deg[val_idx]
-        y_cv_train, y_cv_val = y_train[train_idx], y_train[val_idx]
 
-        # Scale CV data
-        X_cv_train_s, y_cv_train_s, X_mean_cv, X_std_cv, y_mean_cv = scale_data(
-            X_cv_train, y_cv_train
-        )
-        X_cv_val_s = (X_cv_val - X_mean_cv) / X_std_cv
 
-        # Fit OLS
-        try:
-            theta_cv = OLS_parameters(X_cv_train_s, y_cv_train_s)
-            y_pred_cv = X_cv_val_s @ theta_cv + y_mean_cv
-            cv_scores.append(np.mean((y_cv_val - y_pred_cv) ** 2))
-        except np.linalg.LinAlgError:
-            cv_scores.append(np.inf)  # Penalize singular matrices
 
-    cv_errors[i] = np.mean(cv_scores)
 
-    print(f"  MSE Train: {mse_train[i]:.4f}, Test: {mse_test[i]:.4f}")
-    print(
-        f"  Bias²: {bias_squared[i]:.4f}, Variance: {variance[i]:.4f}, Total: {total_error[i]:.4f}"
-    )
-    print(f"  CV Error: {cv_errors[i]:.4f}")
+# # =================================================================================
+# #                    Bias-Variance Trade-off: Polynomial Degrees
+# # =================================================================================
 
-print("\n" + "=" * 50)
-print("Analysis complete! Creating plots...")
+# # Setup
+# N = 300
+# degrees = range(51)
+# n_bootstraps = 100
+# k_folds = 5
 
-# ================================================================================================
-#                                           PLOTTING
-# ================================================================================================
+# x = np.linspace(-1, 1, N).reshape(-1, 1)
+# y = runge(x) + np.random.normal(0, 0.1, x.shape)
+# x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
-# Plot 1: MSE vs Degree (like Hastie Fig 2.11)
-plt.figure(figsize=(10, 6))
-plt.plot(degrees, mse_train, "o-", label="Training MSE", linewidth=2, markersize=6)
-plt.plot(degrees, mse_test, "o-", label="Test MSE", linewidth=2, markersize=6)
-plt.xlabel("Polynomial Degree", fontsize=16)
-plt.ylabel("Mean Squared Error", fontsize=16)
-plt.title("Training and Test MSE vs Model Complexity", fontsize=16)
-plt.yscale("log")
-setup_plot_formatting()
-plt.savefig("figs/mse_vs_degree_bias_variance.pdf")
+# boot_mse_degree = []
+# boot_bias_degree = []
+# boot_var_degree = []
+# cv_mse_degree = []
+
+
+# for deg in degrees:
+#     # Bootstrap
+#     error, bias, variance = bootstrap_analysis(x_train, y_train, x_test, y_test, deg, method='ols', n_bootstraps=n_bootstraps)
+#     boot_mse_degree.append(error)
+#     boot_bias_degree.append(bias)
+#     boot_var_degree.append(variance)
+    
+#     # Cross-validation
+#     mse_mean, _, _ = cv_sklearn(x, y, deg, k_folds=k_folds, method='ols')
+#     cv_mse_degree.append(mse_mean)
+
+# plot_error_vs_degree(degrees, boot_mse_degree, boot_bias_degree, boot_var_degree, method_name='Bootstrap OLS', logscale=True)
+
+# plot_error_vs_degree(degrees, cv_mse_degree, method_name='CV OLS', logscale=True)
+
+
+# # =================================================================================
+# #                    Bias-Variance Trade-off: Dataset Sizes
+# # =================================================================================
+
+# N_list = np.arange(50, 501, 50)
+# degree = 10
+# n_bootstraps = 100
+# k_folds = 5
+
+# boot_errors_n = []
+# boot_biases_n = []
+# boot_variances_n = []
+# cv_mses_n = []
+
+# for N in N_list:
+#     # Generate data
+#     x = np.linspace(-1, 1, N).reshape(-1, 1)
+#     y = runge(x) + np.random.normal(0, 0.1, x.shape)
+
+#     # Bootstrap
+#     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+#     error, bias, variance = bootstrap_analysis(x_train, y_train, x_test, y_test, degree, method='ols', n_bootstraps=n_bootstraps)
+#     boot_errors_n.append(error)
+#     boot_biases_n.append(bias)
+#     boot_variances_n.append(variance)
+    
+#     # Cross-validation
+#     mse_mean, _, _ = cv_sklearn(x, y, degree, k_folds=k_folds, method='ols')
+#     cv_mses_n.append(mse_mean)
+
+
+# plot_error_vs_datasize(N_list, boot_errors_n, _, _, degree=degree, method_name='Bootstrap OLS')
+# plot_error_vs_datasize(N_list, cv_mses_n, degree=degree, method_name='CV OLS')
+
+
+
+
+
+
+
+
+
+n = 500
+n_boostraps = 100
+degree = 15  # A quite high value, just to show.
+noise = 0.1
+
+# Make data set.
+x = np.linspace(-1, 1, n).reshape(-1, 1)
+y = runge(x) + np.random.normal(0, 0.1, x.shape)
+
+# Hold out some test data that is never used in training.
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+
+# Combine x transformation and model into one operation.
+# Not neccesary, but convenient.
+model = make_pipeline(PolynomialFeatures(degree=degree), LinearRegression(fit_intercept=False))
+
+# The following (m x n_bootstraps) matrix holds the column vectors y_pred
+# for each bootstrap iteration.
+y_pred = np.empty((y_test.shape[0], n_boostraps))
+for i in range(n_boostraps):
+    x_, y_ = resample(x_train, y_train)
+
+    # Evaluate the new model on the same test data each time.
+    y_pred[:, i] = model.fit(x_, y_).predict(x_test).ravel()
+
+# Note: Expectations and variances taken w.r.t. different training
+# data sets, hence the axis=1. Subsequent means are taken across the test data
+# set in order to obtain a total value, but before this we have error/bias/variance
+# calculated per data point in the test set.
+# Note 2: The use of keepdims=True is important in the calculation of bias as this 
+# maintains the column vector form. Dropping this yields very unexpected results.
+error = np.mean( np.mean((y_test - y_pred)**2, axis=1, keepdims=True) )
+bias = np.mean( (y_test - np.mean(y_pred, axis=1, keepdims=True))**2 )
+variance = np.mean( np.var(y_pred, axis=1, keepdims=True) )
+print('Error:', error)
+print('Bias^2:', bias)
+print('Var:', variance)
+print('{} >= {} + {} = {}'.format(error, bias, variance, bias+variance))
+
+plt.plot(x[::5, :], y[::5, :], label='f(x)')
+plt.scatter(x_test, y_test, label='Data points')
+plt.scatter(x_test, np.mean(y_pred, axis=1), label='Pred')
+plt.legend()
 plt.show()
 
-# Plot 2: Bias-Variance Decomposition
-plt.figure(figsize=(12, 8))
-plt.plot(degrees, bias_squared, "o-", label="Bias²", linewidth=2, markersize=6)
-plt.plot(degrees, variance, "s-", label="Variance", linewidth=2, markersize=6)
-plt.plot(
-    degrees,
-    total_error,
-    "^-",
-    label="Total Error (Bias² + Var + σ²)",
-    linewidth=2,
-    markersize=6,
-)
-plt.plot(
-    degrees,
-    observed_test_error,
-    "x-",
-    label="Observed Test Error",
-    linewidth=2,
-    markersize=6,
-)
-plt.axhline(
-    y=sigma_squared,
-    color="red",
-    linestyle="--",
-    alpha=0.7,
-    label=f"Irreducible Error (σ² = {sigma_squared})",
-)
 
-plt.xlabel("Polynomial Degree", fontsize=16)
-plt.ylabel("Error", fontsize=16)
-plt.title("Bias-Variance Decomposition for OLS Regression", fontsize=16)
-plt.yscale("log")
-setup_plot_formatting()
-plt.savefig("figs/bias_variance_decomposition.pdf")
+
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.utils import resample
+
+np.random.seed(2018)
+
+n = 300
+n_boostraps = 2000
+maxdegree = 20
+
+# Make data set
+x = np.linspace(-1, 1, n).reshape(-1, 1)
+noise_std = 0.1
+noise_var = noise_std**2  # True theoretical variance = 0.01
+epsilon = np.random.normal(0, noise_std, x.shape)
+y = runge(x) + epsilon
+
+error = np.zeros(maxdegree)
+bias_squared = np.zeros(maxdegree)
+variance = np.zeros(maxdegree)
+expected_error = np.zeros(maxdegree)
+polydegree = np.zeros(maxdegree)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+
+for degree in range(maxdegree):
+    model = make_pipeline(PolynomialFeatures(degree=degree), LinearRegression(fit_intercept=False))
+    y_pred = np.empty((y_test.shape[0], n_boostraps))
+    for i in range(n_boostraps):
+        x_, y_ = resample(x_train, y_train)
+        y_pred[:, i] = model.fit(x_, y_).predict(x_test).ravel()
+
+    polydegree[degree] = degree
+    error[degree] = np.mean(np.mean((y_test - y_pred)**2, axis=1, keepdims=True))
+    bias_squared[degree] = np.mean((y_test - np.mean(y_pred, axis=1, keepdims=True))**2)
+    variance[degree] = np.mean(np.var(y_pred, axis=1, keepdims=True))
+    expected_error[degree] = variance[degree] + bias_squared[degree]   # Use true variance
+
+plt.hlines(noise_var, 0, maxdegree, colors='k', linestyles='dashed', label='Noise level')
+plt.plot(polydegree, expected_error, label='Expected error (with noise)')
+plt.plot(polydegree, error, label='Error')
+plt.plot(polydegree, bias_squared, label='Bias^2')
+plt.plot(polydegree, variance, label='Variance')
+plt.legend()
 plt.show()
-
-# Plot 3: Components of bias-variance on linear scale (better for interpretation)
-plt.figure(figsize=(12, 8))
-plt.plot(degrees, bias_squared, "o-", label="Bias²", linewidth=2, markersize=6)
-plt.plot(degrees, variance, "s-", label="Variance", linewidth=2, markersize=6)
-plt.axhline(
-    y=sigma_squared,
-    color="red",
-    linestyle="--",
-    alpha=0.7,
-    label=f"Irreducible Error (σ² = {sigma_squared})",
-)
-
-plt.xlabel("Polynomial Degree", fontsize=16)
-plt.ylabel("Error", fontsize=16)
-plt.title("Bias² and Variance vs Model Complexity (Linear Scale)", fontsize=16)
-setup_plot_formatting()
-plt.savefig("figs/bias_variance_components_linear.pdf")
-plt.show()
-
-# Plot 4: Cross-validation comparison
-plt.figure(figsize=(10, 6))
-plt.plot(degrees, mse_test, "o-", label="Test MSE", linewidth=2, markersize=6)
-plt.plot(
-    degrees, cv_errors, "s-", label="Cross-Validation MSE", linewidth=2, markersize=6
-)
-plt.plot(
-    degrees,
-    total_error,
-    "^-",
-    label="Expected Error (Bias-Var)",
-    linewidth=2,
-    markersize=6,
-)
-
-plt.xlabel("Polynomial Degree", fontsize=16)
-plt.ylabel("Mean Squared Error", fontsize=16)
-plt.title("Test MSE vs Cross-Validation vs Expected Error", fontsize=16)
-plt.yscale("log")
-setup_plot_formatting()
-plt.savefig("figs/cv_vs_test_error.pdf")
-plt.show()
-
-# ================================================================================================
-#                                      RESULTS SUMMARY
-# ================================================================================================
-
-print("\n" + "=" * 60)
-print("BIAS-VARIANCE ANALYSIS SUMMARY")
-print("=" * 60)
-
-# Find optimal degree for different criteria
-min_test_idx = np.argmin(mse_test)
-min_cv_idx = np.argmin(cv_errors)
-min_total_idx = np.argmin(total_error)
-
-print(
-    f"Optimal polynomial degree (Test MSE): {degrees[min_test_idx]} (MSE = {mse_test[min_test_idx]:.4f})"
-)
-print(
-    f"Optimal polynomial degree (CV): {degrees[min_cv_idx]} (MSE = {cv_errors[min_cv_idx]:.4f})"
-)
-print(
-    f"Optimal polynomial degree (Expected Error): {degrees[min_total_idx]} (Error = {total_error[min_total_idx]:.4f})"
-)
-
-print(f"\nAt optimal degree {degrees[min_total_idx]}:")
-print(f"  Bias² = {bias_squared[min_total_idx]:.4f}")
-print(f"  Variance = {variance[min_total_idx]:.4f}")
-print(f"  Irreducible Error = {sigma_squared:.4f}")
-print(f"  Total = {total_error[min_total_idx]:.4f}")
-
-# Verify bias-variance decomposition
-print(f"\nDecomposition verification at degree {degrees[min_total_idx]}:")
-expected_sum = bias_squared[min_total_idx] + variance[min_total_idx] + sigma_squared
-print(f"  Bias² + Variance + σ² = {expected_sum:.4f}")
-print(f"  Total Error = {total_error[min_total_idx]:.4f}")
-print(f"  Difference = {abs(expected_sum - total_error[min_total_idx]):.6f}")
-
-# Analysis of bias-variance trade-off
-print(f"\nBias-Variance Trade-off Analysis:")
-print(f"  Low degrees (underfitting): High bias, low variance")
-print(f"    Degree 1: Bias² = {bias_squared[0]:.4f}, Variance = {variance[0]:.4f}")
-print(f"  High degrees (overfitting): Low bias, high variance")
-print(
-    f"    Degree {max(degrees)}: Bias² = {bias_squared[-1]:.4f}, Variance = {variance[-1]:.4f}"
-)
-
-print("\n" + "=" * 60)
-print("All plots saved to figs/ directory")
-print("=" * 60)
