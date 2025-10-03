@@ -71,17 +71,16 @@ for N in SAMPLE_SIZES:
         results_current["test_r2"].append(analysis.get_metric('ols', 'analytical', 'test_r2'))
         results_current["instances"].append(analysis)
     
+
     all_results[N] = results_current
+    
+
 
 
     if N == 50: 
-        mse_degree_ols(all_results, sample_size=N)
-        r2_degree_ols(results_current, sample_size=N)
+        mse_degree_ols(results_current)
+        r2_degree_ols(results_current)
 
-
-# ============================================================================
-# INDIVIDUAL PLOTS FOR SPECIFIC SAMPLE SIZE
-# ============================================================================
 
 
 
