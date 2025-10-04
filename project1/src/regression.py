@@ -33,7 +33,8 @@ class RegressionAnalysis:
         # Add stochastic parameters
         batch_size=32,
         n_epochs=50,
-        random_state=None
+        random_state=None,
+        tol_relative=1e-6
     ):
         if full_dataset:
             # data = [X_full, y_full, y_mean] (already centered)
@@ -54,6 +55,7 @@ class RegressionAnalysis:
         self.batch_size = batch_size
         self.n_epochs = n_epochs
         self.random_state = random_state
+        self.tol_relative = tol_relative
 
         # Where everything lands: runs[(model, opt)] -> dict of artifacts
         self.runs: Dict[Tuple[str, str], Dict[str, Any]] = {}
@@ -174,6 +176,7 @@ class RegressionAnalysis:
                         num_iters=self.n_epochs,  # Pass n_epochs as num_iters
                         method=model,
                         lam=lam_arg,
+                        tol_relative=self.tol_relative,
                         stochastic=True,  # Enable stochastic mode
                         batch_size=opt_kwargs.get("batch_size", self.batch_size),
                         **{k: v for k, v in opt_kwargs.items() if k != "batch_size"}
@@ -190,6 +193,7 @@ class RegressionAnalysis:
                         self.num_iters,
                         method=model,
                         lam=lam_arg,
+                        tol_relative=self.tol_relative,
                         **opt_kwargs,
                     )
 
