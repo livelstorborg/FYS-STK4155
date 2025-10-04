@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from mpl_toolkits.mplot3d import Axes3D
 
-from src.plotting import mse_degree_ridge, r2_degree_ridge
+from src.plotting import mse_degree_ridge, r2_degree_ridge, plot_theta
 from src.regression import RegressionAnalysis
 from src.utils import polynomial_features, scale_data, runge
 
@@ -15,7 +15,7 @@ from src.utils import polynomial_features, scale_data, runge
 
 SAMPLE_SIZES = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750]
 LAMBDAS = np.logspace(-5, 2, 8)  
-DEGREES = range(1, 16) 
+DEGREES = range(1, 36) 
 
 
 # ============================================================================
@@ -23,6 +23,7 @@ DEGREES = range(1, 16)
 # ============================================================================
 
 all_results = {}
+theta_list = []
 
 for N in SAMPLE_SIZES:
     results_for_N = {}
@@ -67,7 +68,11 @@ for N in SAMPLE_SIZES:
                 data_splits[deg], degree=deg, lam=lam, eta=None, num_iters=None
             )
             analysis.fit(models='ridge', opts='analytical')
-            
+
+            if N == 50 and lam == 0.01:
+                theta = analysis.get_theta('ridge', 'analytical')
+                theta_list.append(theta)
+
             results_current["train_mse"].append(analysis.get_metric('ridge', 'analytical', 'train_mse'))
             results_current["test_mse"].append(analysis.get_metric('ridge', 'analytical', 'test_mse'))
             results_current["train_r2"].append(analysis.get_metric('ridge', 'analytical', 'train_r2'))
@@ -86,6 +91,7 @@ for N in SAMPLE_SIZES:
         r2_degree_ridge(results)
 
 
+plot_theta(theta_list, method='Ridge')
 # ============================================================================
 # PREPARE DATA AND FIND GLOBAL OPTIMUM
 # ============================================================================
