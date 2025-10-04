@@ -20,7 +20,7 @@ def setup_plot_formatting():
     plt.tight_layout()
 
 
-# Exercise 1a)
+
 def mse_degree_ols(results):
     """
     Plot MSE vs polynomial degree for training and test data.
@@ -42,6 +42,7 @@ def mse_degree_ols(results):
         label="MSE (train)",
         linewidth=2,
         markersize=6,
+        color='darkviolet'
     )
     plt.plot(
         results["degrees"],
@@ -50,17 +51,18 @@ def mse_degree_ols(results):
         label="MSE (test)",
         linewidth=2,
         markersize=6,
+        color='#D63290'
     )
 
     min_test_mse = min(results["test_mse"])
     min_degree = results["degrees"][results["test_mse"].index(min_test_mse)]
-    plt.plot(min_degree, min_test_mse, 'rx', markersize=12, markeredgewidth=2, 
+    plt.plot(min_degree, min_test_mse, '*', markersize=20, markeredgewidth=2, color='#F2B44D', markeredgecolor='black',
          label=f'Min Test MSE: {min_test_mse:.2f}') 
     
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"MSE", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/mse_vs_degree_ols.pdf")
+    plt.savefig("figs/mse_vs_degree_ols.pdf", bbox_inches='tight')
     plt.show()
 
 
@@ -83,6 +85,7 @@ def r2_degree_ols(results):
         label="R² (train)",
         linewidth=2,
         markersize=6,
+        color='darkviolet'
     )
     plt.plot(
         results["degrees"],
@@ -91,6 +94,7 @@ def r2_degree_ols(results):
         label="R² (test)",
         linewidth=2,
         markersize=6,
+        color='#D63290'
     )
 
 
@@ -98,13 +102,38 @@ def r2_degree_ols(results):
     max_test_r2 = max(results["test_r2"])
     max_degree = results["degrees"][results["test_r2"].index(max_test_r2)]
 
-    plt.plot(max_degree, max_test_r2, 'rx', markersize=12, markeredgewidth=2, 
+    plt.plot(max_degree, max_test_r2, '*', markersize=20, markeredgewidth=2, color='#F2B44D', markeredgecolor='black',
          label=f'Max Test R²: {max_test_r2:.2f}')
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"R²", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/r2_vs_degree_ols.pdf")
+    plt.savefig("figs/r2_vs_degree_ols.pdf", bbox_inches='tight')
     plt.show()
+
+
+def plot_theta(theta: list, method: str):
+    """
+    Plot the model parameters (theta) for a given method.
+    
+    Parameters
+    ----------
+    theta : list or np.ndarray
+        Model parameters to plot
+    method : str
+        Method name for labeling the plot
+    """
+
+    plt.figure(figsize=(8, 6))
+    setup_plot_formatting()
+    for i, theta in enumerate(theta):
+        for param in theta:
+            plt.scatter(i+1, param, label=f"θ_{i}" if i == 0 else "", s=100, color='mediumorchid', alpha=0.5, edgecolors='black')
+    plt.xlabel('Polynomial Degree', fontsize=16)
+    plt.ylabel(rf'$\theta_{{{method}}}$', fontsize=16)
+    plt.savefig(f"figs/theta_{method.lower()}.pdf", bbox_inches='tight')
+    plt.show()
+
+
 
 
 
@@ -128,6 +157,7 @@ def mse_degree_ridge(results):
         label="MSE (train)",
         linewidth=2,
         markersize=6,
+        color='darkviolet'
     )
     plt.plot(
         results["degrees"],
@@ -136,18 +166,19 @@ def mse_degree_ridge(results):
         label="MSE (test)",
         linewidth=2,
         markersize=6,
+        color='#D63290'
     )
 
     lam = results['lambda']
     min_test_mse = min(results["test_mse"])
     min_degree = results["degrees"][results["test_mse"].index(min_test_mse)]
-    plt.plot(min_degree, min_test_mse, 'rx', markersize=12, markeredgewidth=2, 
+    plt.plot(min_degree, min_test_mse, '*', markersize=20, markeredgewidth=2, color='#F2B44D', markeredgecolor='black',
          label=f'Min Test MSE: {min_test_mse:.2f}') 
     
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel("MSE", fontsize=16)
     setup_plot_formatting()
-    plt.savefig(f"figs/mse_vs_degree_ridge.pdf")
+    plt.savefig(f"figs/mse_vs_degree_ridge.pdf", bbox_inches='tight')
     plt.show()
 
 
@@ -163,6 +194,7 @@ def r2_degree_ridge(results):
         label="R² (train)",
         linewidth=2,
         markersize=6,
+        color='darkviolet'
     )
     plt.plot(
         results["degrees"],
@@ -171,17 +203,18 @@ def r2_degree_ridge(results):
         label="R² (test)",
         linewidth=2,
         markersize=6,
+        color='#D63290'
     )
 
     max_test_r2 = max(results["test_r2"])
     max_degree = results["degrees"][results["test_r2"].index(max_test_r2)]
 
-    plt.plot(max_degree, max_test_r2, 'rx', markersize=12, markeredgewidth=2, 
+    plt.plot(max_degree, max_test_r2, '*', markersize=20, markeredgewidth=2, color='#F2B44D', markeredgecolor='black',
          label=f'Max Test R²: {max_test_r2:.2f}')
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel("R²", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/r2_vs_degree_ridge.pdf")
+    plt.savefig("figs/r2_vs_degree_ridge.pdf", bbox_inches='tight')
     plt.show()
 
 
