@@ -5,7 +5,7 @@ import seaborn as sns
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from src.plotting import mse_degree_ols, r2_degree_ols
+from src.plotting import mse_degree_ols, r2_degree_ols, plot_theta
 from src.regression import RegressionAnalysis
 from src.utils import polynomial_features, scale_data, runge
 
@@ -24,6 +24,7 @@ PLOT_SAMPLE_SIZE = 50  # Sample size for individual plots
 # DATA GENERATION AND MODEL FITTING
 # ============================================================================
 all_results = {}
+theta_list = []
 
 for N in SAMPLE_SIZES:
     # Generate data
@@ -64,15 +65,23 @@ for N in SAMPLE_SIZES:
             data_splits[deg], degree=deg, lam=0.0, eta=None, num_iters=None
         )
         analysis.fit(models='ols', opts='analytical')
+
+        if N == 50:
+            theta = analysis.get_theta('ols', 'analytical')
+            theta_list.append(theta)
         
         results_current["train_mse"].append(analysis.get_metric('ols', 'analytical', 'train_mse'))
         results_current["test_mse"].append(analysis.get_metric('ols', 'analytical', 'test_mse'))
         results_current["train_r2"].append(analysis.get_metric('ols', 'analytical', 'train_r2'))
         results_current["test_r2"].append(analysis.get_metric('ols', 'analytical', 'test_r2'))
         results_current["instances"].append(analysis)
+
+
     
 
     all_results[N] = results_current
+
+    
     
 
 
@@ -82,6 +91,7 @@ for N in SAMPLE_SIZES:
         r2_degree_ols(results_current)
 
 
+plot_theta(theta_list, 'ols')
 
 
 # ============================================================================
@@ -140,3 +150,8 @@ ax.add_patch(rect)
 plt.tight_layout()
 plt.savefig('figs/mse_heatmap_ols.pdf')
 plt.show()
+
+
+
+
+
