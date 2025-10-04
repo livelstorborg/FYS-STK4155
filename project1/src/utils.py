@@ -1,12 +1,5 @@
 import numpy as np
 from sklearn.metrics import mean_squared_error
-from sklearn.utils import resample
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import LinearRegression
-
-
-from sklearn.model_selection import KFold
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
 
 def runge(x):
     """Runge function: f(x) = 1 / (1 + 25x^2)"""
@@ -14,25 +7,7 @@ def runge(x):
 
 
 def polynomial_features(x: np.ndarray, p: int, intercept: bool = False) -> np.ndarray:
-    """
-    Generate polynomial features from input data.
-
-    Parameters
-    ----------
-    x : np.ndarray
-        Input array of shape (n_samples,). Typically a 1D vector of input values.
-    p : int
-        The degree of the polynomial features.
-    intercept : bool, optional
-        If True, includes a column of ones as the intercept (bias term).
-        If False, only polynomial terms are included. Default is False.
-
-    Returns
-    -------
-    np.ndarray
-        Matrix of polynomial features with shape (n_samples, p) if intercept=False,
-        or (n_samples, p+1) if intercept=True.
-    """
+    """Generate polynomial features from input data."""
     n = len(x)
     offset = 1 if intercept else 0
     X = np.ones((n, p + offset))
@@ -76,31 +51,11 @@ def Ridge_gradient(X, y, theta, lam):
 
 
 def analytical_solution(X, y, method="ols", lam=None):
-    """
-    Unified analytical solution function for OLS and Ridge regression.
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Feature matrix of shape (n_samples, n_features)
-    y : np.ndarray
-        Target vector of shape (n_samples,)
-    method : str
-        Regression method: 'ols' or 'ridge'
-    lam : float, optional
-        Regularization parameter (required for ridge)
-
-    Returns
-    -------
-    theta : np.ndarray
-        Fitted parameters
-    """
+    """Unified analytical solution function for OLS and Ridge regression."""
     if method.lower() not in ["ols", "ridge"]:
         raise ValueError("Analytical solution only available for 'ols' and 'ridge'")
-
     if method.lower() == "ridge" and lam is None:
         raise ValueError("Ridge regression requires lam parameter")
-
     if method.lower() == "ols":
         return OLS_parameters(X, y)
     elif method.lower() == "ridge":
@@ -108,62 +63,35 @@ def analytical_solution(X, y, method="ols", lam=None):
 
 
 def soft_threshold(x, threshold):
-    """
-    Soft thresholding operator for Lasso regression.
-
-    This is the proximal operator for the L1 norm:
-    soft_threshold(x, λ) = sign(x) * max(|x| - λ, 0)
-
-    Parameters
-    ----------
-    x : float or np.ndarray
-        Input value(s)
-    threshold : float
-        Threshold parameter (λ)
-
-    Returns
-    -------
-    float or np.ndarray
-        Soft-thresholded value(s)
-    """
+    """Soft thresholding operator for Lasso regression."""
     return np.sign(x) * np.maximum(np.abs(x) - threshold, 0.0)
 
 
-def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol=1e-8, stochastic=False, batch_size=32):
+def learning_rate_schedule(t, eta0, t0=5, t1=50):
     """
-    Unified gradient descent function for OLS, Ridge, and Lasso regression.
-
+    Learning rate schedule for SGD: eta(t) = eta0 * t0 / (t + t1)
+    
     Parameters
     ----------
-    X : np.ndarray
-        Feature matrix of shape (n_samples, n_features)
-    y : np.ndarray
-        Target vector of shape (n_samples,)
-    eta : float
-        Learning rate
-    num_iters : int
-        Maximum number of iterations (for batch GD) or epochs (for SGD)
-    method : str
-        Regression method: 'ols', 'ridge', or 'lasso'
-    lam : float, optional
-        Regularization parameter (required for ridge and lasso)
-    tol : float
-        Convergence tolerance
-    stochastic : bool
-        If True, use stochastic gradient descent
-    batch_size : int
-        Size of minibatches for SGD
+    t : int
+        Current iteration/step number
+    eta0 : float
+        Initial learning rate
+    t0, t1 : float
+        Schedule parameters controlling decay rate
+    """
+    return eta0 * t0 / (t + t1)
 
-    Returns
-    -------
-    theta : np.ndarray
-        Fitted parameters
-    mse_history : list
-        MSE values at each iteration/epoch
+
+def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol_relative=1e-6, 
+                     stochastic=False, batch_size=32, use_schedule=False, t0=5, t1=50):
+    """
+    Unified gradient descent function for OLS, Ridge, and Lasso regression.
+    
+    NEW: Added learning rate scheduling for stochastic mode
     """
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
-
     if method.lower() in ["ridge", "lasso"] and lam is None:
         raise ValueError(f"{method} regression requires lam parameter")
 
@@ -172,51 +100,47 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol=1e-8, sto
     mse_history = []
 
     if stochastic:
-        # Stochastic Gradient Descent with minibatches
-        m = int(n_samples / batch_size)  # number of minibatches
-        n_epochs = num_iters  # treat num_iters as epochs for SGD
+        m = int(n_samples / batch_size)
+        n_epochs = num_iters
+        t_global = 0  # Global step counter for learning rate schedule
         
         for epoch in range(n_epochs):
-            # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
             
-            epoch_mse = 0
             for i in range(m):
-                # Pick random minibatch
-                k = np.random.randint(m)
-                start_idx = k * batch_size
+                t_global += 1
+                start_idx = i * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
                 
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
                 
-                # Compute gradient on minibatch
+                # Apply learning rate schedule if requested
+                current_eta = learning_rate_schedule(t_global, eta, t0, t1) if use_schedule else eta
+                
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
-                    theta_new = theta - eta * grad
+                    theta_new = theta - current_eta * grad
                 elif method.lower() == "ridge":
                     grad = Ridge_gradient(X_batch, y_batch, theta, lam)
-                    theta_new = theta - eta * grad
+                    theta_new = theta - current_eta * grad
                 elif method.lower() == "lasso":
                     grad_smooth = OLS_gradient(X_batch, y_batch, theta)
-                    theta_temp = theta - eta * grad_smooth
-                    theta_new = soft_threshold(theta_temp, eta * lam)
+                    theta_temp = theta - current_eta * grad_smooth
+                    theta_new = soft_threshold(theta_temp, current_eta * lam)
                 
                 theta = theta_new
             
-            # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y, y_pred_full)
             mse_history.append(epoch_mse)
             
-            # Check convergence (optional for SGD)
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
+            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
                 break
                 
     else:
-        # Standard Batch Gradient Descent (your original implementation)
         for t in range(num_iters):
             y_pred = X @ theta
             mse = mean_squared_error(y, y_pred)
@@ -233,412 +157,368 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol=1e-8, sto
                 theta_temp = theta - eta * grad_smooth
                 theta_new = soft_threshold(theta_temp, eta * lam)
 
-            step_size = np.linalg.norm(theta_new - theta)
             theta = theta_new
 
-            if step_size < tol:
+            # Test for divergence
+            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
+                print(f'({method}) eta = {eta}, diverged')
                 break
+            # Only check convergence after at least 2 iterations
+            if t > 0:
+                abs_change = np.abs(mse_history[t] - mse_history[t-1])
+                rel_change = abs_change / mse_history[t-1] if mse_history[t-1] > 1e-10 else abs_change
+        
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    converged_at = t
+                    print(f'({method}) eta = {eta}, converged at iteration {t}')
+                    break
 
     return theta, mse_history
 
-def gd_momentum(
-    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.9, tol=1e-10, 
-    stochastic=False, batch_size=32
-):
+
+
+
+def gd_momentum(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.9, 
+                tol_relative=1e-6, stochastic=False, batch_size=32, use_schedule=False, t0=5, t1=50):
     """
     Unified Gradient Descent with momentum for OLS, Ridge, and Lasso.
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Feature matrix
-    y : np.ndarray
-        Target vector
-    eta : float
-        Learning rate
-    num_iters : int
-        Maximum number of iterations (epochs if stochastic=True)
-    method : str
-        Regression method: 'ols', 'ridge', or 'lasso'
-    lam : float, optional
-        Regularization parameter (required for ridge and lasso)
-    beta : float
-        Momentum parameter
-    tol : float
-        Convergence tolerance
-    stochastic : bool
-        If True, use stochastic gradient descent
-    batch_size : int
-        Size of minibatches for SGD
-
-    Returns
-    -------
-    theta : np.ndarray
-        Fitted parameters
-    mse_history : list
-        MSE values at each iteration/epoch
+    
+    NEW: Added learning rate scheduling for stochastic mode
     """
-    # Validate inputs
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
-
     if method.lower() in ["ridge", "lasso"] and lam is None:
         raise ValueError(f"{method} regression requires lam parameter")
 
     n_samples, n_features = X.shape
     theta = np.zeros(n_features)
-    v = np.zeros_like(theta)  # velocity
+    v = np.zeros_like(theta)
     mse_history = []
 
     if stochastic:
-        # Stochastic Gradient Descent with momentum
-        m = int(n_samples / batch_size)  # number of minibatches
-        n_epochs = num_iters  # treat num_iters as epochs for SGD
+        m = int(n_samples / batch_size)
+        n_epochs = num_iters
+        t_global = 0
         
         for epoch in range(n_epochs):
-            # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
             
             for i in range(m):
-                # Pick random minibatch
-                k = np.random.randint(m)
-                start_idx = k * batch_size
+                t_global += 1
+                start_idx = i * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
                 
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
                 
-                # gradient + momentum step based on method
+                # Apply learning rate schedule if requested
+                current_eta = learning_rate_schedule(t_global, eta, t0, t1) if use_schedule else eta
+                
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
                     v = beta * v + grad
-                    theta = theta - eta * v
-
+                    theta = theta - current_eta * v
                 elif method.lower() == "ridge":
                     grad = Ridge_gradient(X_batch, y_batch, theta, lam)
                     v = beta * v + grad
-                    theta = theta - eta * v
-
+                    theta = theta - current_eta * v
                 elif method.lower() == "lasso":
-                    # For Lasso, apply momentum to smooth part, then proximal step
                     grad_smooth = OLS_gradient(X_batch, y_batch, theta)
                     v = beta * v + grad_smooth
-                    theta_temp = theta - eta * v
-                    theta = soft_threshold(theta_temp, eta * lam)
+                    theta_temp = theta - current_eta * v
+                    theta = soft_threshold(theta_temp, current_eta * lam)
             
-            # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
             
-            # Check convergence (optional for SGD)
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
+            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
                 break
     else:
-        # Standard Batch Gradient Descent with momentum
         for t in range(num_iters):
-            # predict + MSE
             y_pred = X @ theta
             mse = mean_squared_error(y_true=y, y_pred=y_pred)
             mse_history.append(mse)
 
-            # gradient + momentum step based on method
             if method.lower() == "ols":
                 grad = OLS_gradient(X, y, theta)
                 v = beta * v + grad
                 theta = theta - eta * v
-
             elif method.lower() == "ridge":
                 grad = Ridge_gradient(X, y, theta, lam)
                 v = beta * v + grad
                 theta = theta - eta * v
-
             elif method.lower() == "lasso":
-                # For Lasso, apply momentum to smooth part, then proximal step
                 grad_smooth = OLS_gradient(X, y, theta)
                 v = beta * v + grad_smooth
                 theta_temp = theta - eta * v
                 theta = soft_threshold(theta_temp, eta * lam)
 
-            # early stop (by grad norm)
             if method.lower() == "lasso":
-                # For Lasso, check convergence on smooth gradient
                 grad_for_check = OLS_gradient(X, y, theta)
             else:
                 grad_for_check = grad
 
-            if np.linalg.norm(grad_for_check) < tol:
+            # Test for divergence
+            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
+                print(f'({method}) eta = {eta}, diverged')
                 break
+            # Only check convergence after at least 2 iterations
+            if t > 0:
+                abs_change = np.abs(mse_history[t] - mse_history[t-1])
+                rel_change = abs_change / mse_history[t-1] if mse_history[t-1] > 1e-10 else abs_change
+        
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    converged_at = t
+                    print(f'({method}) eta = {eta}, converged at iteration {t}')
+                    break
 
     return theta, mse_history
 
 
-def gd_adagrad(
-    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, eps=1e-8, tol=1e-10,
-    stochastic=False, batch_size=32
-):
+def gd_adagrad(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, eps=1e-8, 
+               tol_relative=1e-6, stochastic=False, batch_size=32):
     """
     Unified AdaGrad for OLS, Ridge, and Lasso.
+    
+    NOTE: AdaGrad has BUILT-IN adaptive learning rates - no schedule needed
     """
-    # Validate inputs
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
-
     if method.lower() in ["ridge", "lasso"] and lam is None:
         raise ValueError(f"{method} regression requires lam parameter")
 
     n_samples, n_features = X.shape
     theta = np.zeros(n_features)
-    G = np.zeros(n_features)  # Accumulated squared gradients
+    G = np.zeros(n_features)
     mse_history = []
 
     if stochastic:
-        # Stochastic AdaGrad
-        m = int(n_samples / batch_size)  # number of minibatches
-        n_epochs = num_iters  # treat num_iters as epochs for SGD
+        m = int(n_samples / batch_size)
+        n_epochs = num_iters
         
         for epoch in range(n_epochs):
-            # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
             
             for i in range(m):
-                # Pick random minibatch
-                k = np.random.randint(m)
-                start_idx = k * batch_size
+                start_idx = i * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
                 
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
                 
-                # gradient based on method
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
                 elif method.lower() == "ridge":
                     grad = Ridge_gradient(X_batch, y_batch, theta, lam)
                 elif method.lower() == "lasso":
-                    # For Lasso, apply AdaGrad to smooth part, then proximal step
                     grad = OLS_gradient(X_batch, y_batch, theta)
 
-                # AdaGrad update
+                # AdaGrad: adaptive learning rate per parameter
                 G += grad**2
                 adapted_grad = grad / (np.sqrt(G) + eps)
 
                 if method.lower() == "lasso":
-                    # Apply proximal step for Lasso
                     theta_temp = theta - eta * adapted_grad
                     theta = soft_threshold(theta_temp, eta * lam)
                 else:
                     theta = theta - eta * adapted_grad
             
-            # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
             
-            # Check convergence (optional for SGD)
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
+            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
                 break
     else:
-        # Standard Batch AdaGrad
         for t in range(num_iters):
-            # predict + MSE
             y_pred = X @ theta
             mse = mean_squared_error(y_true=y, y_pred=y_pred)
             mse_history.append(mse)
 
-            # gradient based on method
             if method.lower() == "ols":
                 grad = OLS_gradient(X, y, theta)
             elif method.lower() == "ridge":
                 grad = Ridge_gradient(X, y, theta, lam)
             elif method.lower() == "lasso":
-                # For Lasso, apply AdaGrad to smooth part, then proximal step
                 grad = OLS_gradient(X, y, theta)
 
-            # AdaGrad update
             G += grad**2
             adapted_grad = grad / (np.sqrt(G) + eps)
 
             if method.lower() == "lasso":
-                # Apply proximal step for Lasso
                 theta_temp = theta - eta * adapted_grad
                 theta = soft_threshold(theta_temp, eta * lam)
             else:
                 theta = theta - eta * adapted_grad
 
-            # early stop (by grad norm)
-            if np.linalg.norm(grad) < tol:
+            # Test for divergence
+            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
+                print(f'({method}) eta = {eta}, diverged')
                 break
+            # Only check convergence after at least 2 iterations
+            if t > 0:
+                abs_change = np.abs(mse_history[t] - mse_history[t-1])
+                rel_change = abs_change / mse_history[t-1] if mse_history[t-1] > 1e-10 else abs_change
+        
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    converged_at = t
+                    print(f'({method}) eta = {eta}, converged at iteration {t}')
+                    break
 
     return theta, mse_history
 
 
-def gd_rmsprop(
-    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.9, eps=1e-8, tol=1e-10,
-    stochastic=False, batch_size=32
-):
+def gd_rmsprop(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.9, 
+               eps=1e-8, tol_relative=1e-6, stochastic=False, batch_size=32):
     """
     Unified RMSProp for OLS, Ridge, and Lasso.
+    
+    NOTE: RMSProp has BUILT-IN adaptive learning rates - no schedule needed
     """
-    # Validate inputs
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
-
     if method.lower() in ["ridge", "lasso"] and lam is None:
         raise ValueError(f"{method} regression requires lam parameter")
 
     n_samples, n_features = X.shape
     theta = np.zeros(n_features)
-    S = np.zeros(n_features)  # EMA of squared gradients
+    S = np.zeros(n_features)
     mse_history = []
 
     if stochastic:
-        # Stochastic RMSProp
-        m = int(n_samples / batch_size)  # number of minibatches
-        n_epochs = num_iters  # treat num_iters as epochs for SGD
+        m = int(n_samples / batch_size)
+        n_epochs = num_iters
         
         for epoch in range(n_epochs):
-            # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
             
             for i in range(m):
-                # Pick random minibatch
-                k = np.random.randint(m)
-                start_idx = k * batch_size
+                start_idx = i * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
                 
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
                 
-                # gradient based on method
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
                 elif method.lower() == "ridge":
                     grad = Ridge_gradient(X_batch, y_batch, theta, lam)
                 elif method.lower() == "lasso":
-                    # For Lasso, apply RMSProp to smooth part, then proximal step
                     grad = OLS_gradient(X_batch, y_batch, theta)
 
-                # RMSProp update
+                # RMSProp: adaptive learning rate per parameter
                 S = beta * S + (1.0 - beta) * (grad**2)
                 adapted_grad = grad / (np.sqrt(S) + eps)
 
                 if method.lower() == "lasso":
-                    # Apply proximal step for Lasso
                     theta_temp = theta - eta * adapted_grad
                     theta = soft_threshold(theta_temp, eta * lam)
                 else:
                     theta = theta - eta * adapted_grad
             
-            # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
             
-            # Check convergence (optional for SGD)
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
+            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
                 break
     else:
-        # Standard Batch RMSProp
         for t in range(num_iters):
-            # predict + MSE
             y_pred = X @ theta
             mse = mean_squared_error(y_true=y, y_pred=y_pred)
             mse_history.append(mse)
 
-            # gradient based on method
             if method.lower() == "ols":
                 grad = OLS_gradient(X, y, theta)
             elif method.lower() == "ridge":
                 grad = Ridge_gradient(X, y, theta, lam)
             elif method.lower() == "lasso":
-                # For Lasso, apply RMSProp to smooth part, then proximal step
                 grad = OLS_gradient(X, y, theta)
 
-            # RMSProp update
             S = beta * S + (1.0 - beta) * (grad**2)
             adapted_grad = grad / (np.sqrt(S) + eps)
 
             if method.lower() == "lasso":
-                # Apply proximal step for Lasso
                 theta_temp = theta - eta * adapted_grad
                 theta = soft_threshold(theta_temp, eta * lam)
             else:
                 theta = theta - eta * adapted_grad
 
-            # early stop (by grad norm)
-            if np.linalg.norm(grad) < tol:
+            # Test for divergence
+            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
+                print(f'({method}) eta = {eta}, diverged')
                 break
+            # Only check convergence after at least 2 iterations
+            if t > 0:
+                abs_change = np.abs(mse_history[t] - mse_history[t-1])
+                rel_change = abs_change / mse_history[t-1] if mse_history[t-1] > 1e-10 else abs_change
+        
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    converged_at = t
+                    print(f'({method}) eta = {eta}, converged at iteration {t}')
+                    break
 
     return theta, mse_history
 
 
-def gd_adam(
-    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta1=0.9, beta2=0.999, 
-    eps=1e-8, tol=1e-10, amsgrad=False, stochastic=False, batch_size=32
-):
+def gd_adam(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta1=0.9, 
+            beta2=0.999, eps=1e-8, tol_relative=1e-6, amsgrad=False, stochastic=False, batch_size=32):
     """
     Unified Adam optimizer for OLS, Ridge, and Lasso.
+    
+    NOTE: Adam has BUILT-IN adaptive learning rates - no schedule needed
     """
-    # Validate inputs
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
-
     if method.lower() in ["ridge", "lasso"] and lam is None:
         raise ValueError(f"{method} regression requires lam parameter")
 
     n_samples, n_features = X.shape
     theta = np.zeros(n_features)
-    m = np.zeros(n_features)  # first moment
-    v = np.zeros(n_features)  # second moment
-    v_max = np.zeros(n_features)  # for AMSGrad
+    m_moment = np.zeros(n_features)
+    v_moment = np.zeros(n_features)
+    v_max = np.zeros(n_features)
     mse_history = []
 
     if stochastic:
-        # Stochastic Adam
-        m_batches = int(n_samples / batch_size)  # number of minibatches
-        n_epochs = num_iters  # treat num_iters as epochs for SGD
-        t = 0  # global step counter for bias correction
+        m_batches = int(n_samples / batch_size)
+        n_epochs = num_iters
+        t = 0
         
         for epoch in range(n_epochs):
-            # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
             
             for i in range(m_batches):
-                t += 1  # increment global step counter
-                
-                # Pick random minibatch
-                k = np.random.randint(m_batches)
-                start_idx = k * batch_size
+                t += 1
+                start_idx = i * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
                 
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
                 
-                # gradient based on method
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
                 elif method.lower() == "ridge":
                     grad = Ridge_gradient(X_batch, y_batch, theta, lam)
                 elif method.lower() == "lasso":
-                    # For Lasso, apply Adam to smooth part, then proximal step
                     grad = OLS_gradient(X_batch, y_batch, theta)
 
-                # Adam update
-                m = beta1 * m + (1.0 - beta1) * grad
-                v = beta2 * v + (1.0 - beta2) * (grad**2)
+                # Adam: combines momentum + adaptive learning rate
+                m_moment = beta1 * m_moment + (1.0 - beta1) * grad
+                v_moment = beta2 * v_moment + (1.0 - beta2) * (grad**2)
 
-                # bias correction
-                m_hat = m / (1.0 - beta1**t)
-                v_hat = v / (1.0 - beta2**t)
+                # Bias correction
+                m_hat = m_moment / (1.0 - beta1**t)
+                v_hat = v_moment / (1.0 - beta2**t)
 
                 if amsgrad:
                     v_max = np.maximum(v_max, v_hat)
@@ -649,44 +529,35 @@ def gd_adam(
                 adapted_grad = m_hat / denom
 
                 if method.lower() == "lasso":
-                    # Apply proximal step for Lasso
                     theta_temp = theta - eta * adapted_grad
                     theta = soft_threshold(theta_temp, eta * lam)
                 else:
                     theta = theta - eta * adapted_grad
             
-            # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
             
-            # Check convergence (optional for SGD)
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
+            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
                 break
     else:
-        # Standard Batch Adam
         for t in range(1, num_iters + 1):
-            # predict + MSE
             y_pred = X @ theta
             mse = mean_squared_error(y_true=y, y_pred=y_pred)
             mse_history.append(mse)
 
-            # gradient based on method
             if method.lower() == "ols":
                 grad = OLS_gradient(X, y, theta)
             elif method.lower() == "ridge":
                 grad = Ridge_gradient(X, y, theta, lam)
             elif method.lower() == "lasso":
-                # For Lasso, apply Adam to smooth part, then proximal step
                 grad = OLS_gradient(X, y, theta)
 
-            # Adam update
-            m = beta1 * m + (1.0 - beta1) * grad
-            v = beta2 * v + (1.0 - beta2) * (grad**2)
+            m_moment = beta1 * m_moment + (1.0 - beta1) * grad
+            v_moment = beta2 * v_moment + (1.0 - beta2) * (grad**2)
 
-            # bias correction
-            m_hat = m / (1.0 - beta1**t)
-            v_hat = v / (1.0 - beta2**t)
+            m_hat = m_moment / (1.0 - beta1**t)
+            v_hat = v_moment / (1.0 - beta2**t)
 
             if amsgrad:
                 v_max = np.maximum(v_max, v_hat)
@@ -697,45 +568,25 @@ def gd_adam(
             adapted_grad = m_hat / denom
 
             if method.lower() == "lasso":
-                # Apply proximal step for Lasso
                 theta_temp = theta - eta * adapted_grad
                 theta = soft_threshold(theta_temp, eta * lam)
             else:
                 theta = theta - eta * adapted_grad
 
-            # early stop (by grad norm)
-            if np.linalg.norm(grad) < tol:
+            # Test for divergence
+            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
+                print(f'({method}) eta = {eta}, diverged')
                 break
+            # Only check convergence after at least 2 iterations and enough history
+            if t > 1 and len(mse_history) >= 2:  # Adam starts from t=1, so check after t > 1
+                current_mse_idx = len(mse_history) - 1  # Current iteration's MSE
+                prev_mse_idx = len(mse_history) - 2     # Previous iteration's MSE
+                abs_change = np.abs(mse_history[current_mse_idx] - mse_history[prev_mse_idx])
+                rel_change = abs_change / mse_history[prev_mse_idx] if mse_history[prev_mse_idx] > 1e-10 else abs_change
+        
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    converged_at = t
+                    print(f'({method}) eta = {eta}, converged at iteration {t}')
+                    break
 
     return theta, mse_history
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
