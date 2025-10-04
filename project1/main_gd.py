@@ -1,4 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
+import pandas as pd
+
 from sklearn.model_selection import train_test_split
 
 from src.plotting import *
@@ -6,293 +10,233 @@ from src.regression import RegressionAnalysis
 from src.utils import polynomial_features, scale_data, runge
 
 
-N = 300
-degree = 15
-lam = 1e-5
-eta = 1e-1
-num_iters = 10000
+np.random.seed(42)
 
-n_epochs = 200    
-batch_size = 50
+
+N = 500
+degree = 5
+lam = 1e-2
+num_iters = 1500
 
 
 x = np.linspace(-1, 1, N)
-np.random.seed(42)
 random_noise = np.random.normal(0, 0.1, N)
 y_true = runge(x)   
 y_noise = y_true + random_noise                 
-X = polynomial_features(x, degree)           
- 
+X = polynomial_features(x, degree)
 
 
-# ==================================================================================================
-#                                    FULL DATASET ANALYSES
-# ==================================================================================================
+X_train, X_test, y_train, y_test = train_test_split(X, y_noise, test_size=0.25, random_state=42)
+x_train = X_train[:, 0] 
+x_test = X_test[:, 0] 
+X_train_s, y_train_s, X_mean, X_std, y_mean = scale_data(X_train, y_train)
+X_test_s, y_test_s, _, _, _ = scale_data(X_test, y_test, X_mean, X_std, y_mean)
+data = [X_train_s, X_test_s, y_train_s, y_test_s, x_train, x_test, y_mean]
 
-X_norm, y_centered, _, _, y_mean = scale_data(X, y_noise) 
-data = [X_norm, y_centered, y_mean]
-analysis = RegressionAnalysis(
-    data, 
-    degree=degree, 
-    lam=lam, eta=1e-3, 
-    num_iters=num_iters,
-    full_dataset=True, 
-    batch_size=batch_size,
-    n_epochs=n_epochs 
-)
 
-analysis.fit(models=('ols', 'ridge'), 
-            opts=('analytical', 'gd', 'momentum', 'adagrad', 'rmsprop', 'adam',
-                   'sgd', 'sgd_momentum', 'sgd_adagrad', 'sgd_rmsprop', 'sgd_adam'),
-            batch_size=batch_size
-)
+eta_list_gd = [0.37, 0.365, 0.2, 0.1]
+eta_list_momentum = [0.4, 0.3, 0.1, 0.05]
+eta_list_adagrad = [0.3, 0.25, 0.15, 0.1]
+eta_list_rmsprop = [0.02, 0.01, 0.005, 0.001]
+eta_list_adam = [0.2, 0.1, 0.05, 0.02]
 
 
 
 
 
 
-# ------------------------------- OLS & RIDGE (analytical vs gd) ---------------------------------
 
 
-solutions_ols = [
-    analysis.runs[('ols', 'analytical')]['y_pred_test'],
-    analysis.runs[('ols', 'gd')]['y_pred_test'],
-    x        
-]
-
-solutions_ridge = [
-    analysis.runs[('ridge', 'analytical')]['y_pred_test'],
-    analysis.runs[('ridge', 'gd')]['y_pred_test'],
-    x        
-]
+# ============================================================================
+#                       Setup for all optimizers
+# ============================================================================
 
 
-
-compare(x, y_noise, y_true, solutions=solutions_ols, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
-compare(x, y_noise, y_true, solutions=solutions_ridge, sample_size=N, degree=degree, lam=lam, type='ridge', test=False)
-
-
-
-
-
-# ------------------------------- DIFFERENT GD METHODS ---------------------------------
-
-solutions_ols_gd = [
-    analysis.runs[('ols', 'analytical')]['y_pred_test'],
-    analysis.runs[('ols', 'gd')]['y_pred_test'], 
-    analysis.runs[('ols', 'momentum')]['y_pred_test'],
-    analysis.runs[('ols', 'adagrad')]['y_pred_test'],
-    analysis.runs[('ols', 'rmsprop')]['y_pred_test'],
-    analysis.runs[('ols', 'adam')]['y_pred_test'],
-    x,
-]
-
-solutions_ridge_gd = [
-    analysis.runs[('ridge', 'analytical')]['y_pred_test'],
-    analysis.runs[('ridge', 'gd')]['y_pred_test'],
-    analysis.runs[('ridge', 'momentum')]['y_pred_test'], 
-    analysis.runs[('ridge', 'adagrad')]['y_pred_test'],
-    analysis.runs[('ridge', 'rmsprop')]['y_pred_test'],
-    analysis.runs[('ridge', 'adam')]['y_pred_test'],
-    x,
-]
+optimizers = {
+    'gd': eta_list_gd,
+    'momentum': eta_list_momentum,
+    'adagrad': eta_list_adagrad,
+    'rmsprop': eta_list_rmsprop,
+    'adam': eta_list_adam
+}
 
 
-
-compare_gd(x, y_noise, y_true, solutions=solutions_ols_gd, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
-compare_gd(x, y_noise, y_true, solutions=solutions_ridge_gd, sample_size=N, degree=degree, lam=lam, type='ridge', test=False)
-
+mse_history_ols_gd, mse_history_ols_momentum, mse_history_ols_adagrad, mse_history_ols_rmsprop, mse_history_ols_adam = [], [], [], [], []
+mse_history_ridge_gd, mse_history_ridge_momentum, mse_history_ridge_adagrad, mse_history_ridge_rmsprop, mse_history_ridge_adam = [], [], [], [], []
 
 
-# ----------------------------- Stochastic --------------------------------
+for opt_name, eta_list in optimizers.items():
+    for eta in eta_list:
+        analysis = RegressionAnalysis(
+            data,
+            degree=degree,
+            lam=lam,
+            eta=eta,
+            num_iters=num_iters,
+            full_dataset=False,
+            tol_relative=1e-5
+        )
+        analysis.fit(models=('ols', 'ridge'), opts=opt_name)
 
-# OLS
-sol_ols_sgd = [
-    analysis.runs[('ols', 'analytical')]['y_pred_test'],
-    analysis.runs[('ols', 'gd')]['y_pred_test'],
-    analysis.runs[('ols', 'sgd')]['y_pred_test'], 
-    x 
-]
+        # Store MSE histories for each model and optimizer
+        if opt_name == 'gd':
+            mse_history_ols_gd.append(analysis.runs[('ols', opt_name)]['history'])
+            mse_history_ridge_gd.append(analysis.runs[('ridge', opt_name)]['history'])
+        elif opt_name == 'momentum':
+            mse_history_ols_momentum.append(analysis.runs[('ols', opt_name)]['history'])
+            mse_history_ridge_momentum.append(analysis.runs[('ridge', opt_name)]['history'])
+        elif opt_name == 'adagrad':
+            mse_history_ols_adagrad.append(analysis.runs[('ols', opt_name)]['history'])
+            mse_history_ridge_adagrad.append(analysis.runs[('ridge', opt_name)]['history'])
+        elif opt_name == 'rmsprop':
+            mse_history_ols_rmsprop.append(analysis.runs[('ols', opt_name)]['history'])
+            mse_history_ridge_rmsprop.append(analysis.runs[('ridge', opt_name)]['history'])
+        elif opt_name == 'adam':
+            mse_history_ols_adam.append(analysis.runs[('ols', opt_name)]['history'])
+            mse_history_ridge_adam.append(analysis.runs[('ridge', opt_name)]['history'])
 
-sol_ols_sgd_momentum = [
-    analysis.runs[('ols', 'analytical')]['y_pred_test'],
-    analysis.runs[('ols', 'momentum')]['y_pred_test'],
-    analysis.runs[('ols', 'sgd_momentum')]['y_pred_test'], 
-    x 
-]
 
-sol_ols_sgd_adagrad = [
-    analysis.runs[('ols', 'analytical')]['y_pred_test'],
-    analysis.runs[('ols', 'adagrad')]['y_pred_test'],
-    analysis.runs[('ols', 'sgd_adagrad')]['y_pred_test'], 
-    x 
-]
 
-sol_ols_sgd_rmsprop = [
-    analysis.runs[('ols', 'analytical')]['y_pred_test'],
-    analysis.runs[('ols', 'rmsprop')]['y_pred_test'],
-    analysis.runs[('ols', 'sgd_rmsprop')]['y_pred_test'], 
-    x 
-]
+
+
+
+
+
+
+# ============================================================================
+#                  Gradient descent: OLS vs RIDGE
+# ============================================================================
+
+
+
+fig, ax = plt.subplots(figsize=(10, 6))
+
+n_etas = len(eta_list_gd)
+colors = cm.plasma(np.linspace(0.15, 0.95, n_etas))
+
+for i, eta in enumerate(eta_list_gd):
+    ax.plot(range(1, len(mse_history_ols_gd[i]) + 1), mse_history_ols_gd[i], '-', 
+            color=colors[i], linewidth=2.5, label=f'OLS (η={eta})')
     
-sol_ols_sgd_adam = [
-    analysis.runs[('ols', 'analytical')]['y_pred_test'],
-    analysis.runs[('ols', 'adam')]['y_pred_test'],
-    analysis.runs[('ols', 'sgd_adam')]['y_pred_test'], 
-    x 
+
+    iterations_ols = len(mse_history_ols_gd[i])
+    final_mse_ols = mse_history_ols_gd[i][-1]
+    initial_mse_ols = mse_history_ols_gd[i][0]
+    if final_mse_ols < initial_mse_ols: 
+        ax.axvline(iterations_ols, color=colors[i], linewidth=1.5, alpha=0.7)
+    
+
+    ax.plot(range(1, len(mse_history_ridge_gd[i]) + 1), mse_history_ridge_gd[i], '--', 
+            color=colors[i], linewidth=2.5, label=f'Ridge (η={eta})', alpha=0.8)
+    
+
+    iterations_ridge = len(mse_history_ridge_gd[i])
+    final_mse_ridge = mse_history_ridge_gd[i][-1]
+    initial_mse_ridge = mse_history_ridge_gd[i][0]
+    if final_mse_ridge < initial_mse_ridge:
+        ax.axvline(iterations_ridge, color=colors[i], linestyle=':', linewidth=1.5, alpha=0.7)
+
+ax.set_xscale('log')
+ax.set_yscale('log')
+ax.set_xlabel('Iterations', fontsize=16)
+ax.set_ylabel('MSE', fontsize=16)
+ax.grid(True, alpha=0.3)
+ax.tick_params(labelsize=16)
+ax.legend(fontsize=16, loc='best', ncol=2)
+
+plt.tight_layout()
+plt.savefig('figs/gd_ols_vs_ridge.pdf', dpi=300, bbox_inches='tight')
+plt.show()
+
+
+
+
+
+
+
+# ============================================================================
+#                 Comparing all gd methods: OLS and RIDGE
+# ============================================================================
+
+methods_data = [
+    ('GD', eta_list_gd, mse_history_ols_gd, mse_history_ridge_gd),
+    ('Momentum', eta_list_momentum, mse_history_ols_momentum, mse_history_ridge_momentum),
+    ('AdaGrad', eta_list_adagrad, mse_history_ols_adagrad, mse_history_ridge_adagrad),
+    ('RMSprop', eta_list_rmsprop, mse_history_ols_rmsprop, mse_history_ridge_rmsprop),
+    ('Adam', eta_list_adam, mse_history_ols_adam, mse_history_ridge_adam)
 ]
 
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_momentum, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_adagrad, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_rmsprop, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
-compare_sgd(x, y_noise, y_true, solutions=sol_ols_sgd_adam, sample_size=N, degree=degree, lam=lam, type='ols', test=False)
-
-
-
-
-
-
-
-# ==================================================================================================
-#                          TEST SPLIT ANALYSES
-# ==================================================================================================
-
-X_train, X_test, y_train, y_test = train_test_split(X, y_noise, test_size=0.2, random_state=42)
-x_train = X_train[:, 0] 
-x_test = X_test[:, 0] 
-
-X_train_s, y_train_s, X_mean, X_std, y_mean = scale_data(X_train, y_train)
-X_test_s, y_test_s, _, _, _ = scale_data(X_test, y_test, X_mean, X_std, y_mean)
-
-
-data_test = [X_train_s, X_test_s, y_train_s, y_test_s, x_train, x_test, y_mean]
-analysis_test = RegressionAnalysis(
-    data_test, 
-    degree=degree, 
-    lam=lam, eta=eta, 
-    num_iters=num_iters,
-    full_dataset=False  
-)
-
-analysis_test.fit(models=('ols', 'ridge'), 
-            opts=('analytical', 'gd', 'momentum', 'adagrad', 'rmsprop', 'adam',
-                   'sgd', 'sgd_momentum', 'sgd_adagrad', 'sgd_rmsprop', 'sgd_adam'),
-            batch_size=batch_size
-)
-
-sort_idx = np.argsort(x_test)
-
-
-
-
-
-
-# ------------------------------- (analytical vs gd) ---------------------------------
-
-solutions_test_ols = [
-    analysis_test.runs[('ols', 'analytical')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'gd')]['y_pred_test'][sort_idx], 
-    x_test[sort_idx]  
-]
-
-solutions_test_ridge = [
-    analysis_test.runs[('ridge', 'analytical')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ridge', 'gd')]['y_pred_test'][sort_idx],
-    x_test[sort_idx]  
-]
-
-
-compare(x, y_noise, y_true, solutions=solutions_test_ols, sample_size=N, degree=degree, lam=lam, type='ols')
-compare(x, y_noise, y_true, solutions=solutions_test_ridge, sample_size=N, degree=degree, lam=lam, type='ridge')
-
-
-
-
-
-# ------------------------------- DIFFERENT GD METHODS ---------------------------------
-X_train, X_test, y_train, y_test = train_test_split(X, y_noise, test_size=0.2, random_state=42)
-x_train = X_train[:, 0] 
-x_test = X_test[:, 0] 
-
-X_train_s, y_train_s, X_mean, X_std, y_mean = scale_data(X_train, y_train)
-X_test_s, y_test_s, _, _, _ = scale_data(X_test, y_test, X_mean, X_std, y_mean)
-
-
-
-solutions_test_ols = [
-    analysis_test.runs[('ols', 'analytical')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'gd')]['y_pred_test'][sort_idx], 
-    analysis_test.runs[('ols', 'momentum')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'adagrad')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'rmsprop')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'adam')]['y_pred_test'][sort_idx],
-    x_test[sort_idx],
-]
-
-solutions_test_ridge = [
-    analysis_test.runs[('ridge', 'analytical')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ridge', 'gd')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ridge', 'momentum')]['y_pred_test'][sort_idx], 
-    analysis_test.runs[('ridge', 'adagrad')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ridge', 'rmsprop')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ridge', 'adam')]['y_pred_test'][sort_idx],
-    x_test[sort_idx],
-]
-
-
-
-compare_gd(x, y_noise, y_true, solutions=solutions_test_ols, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
-compare_gd(x, y_noise, y_true, solutions=solutions_test_ridge, sample_size=N, degree=degree, lam=lam, type='ridge', test=True)
-
-
-
-
-
-# ----------------------------- Stochastic --------------------------------
 
 # ----- OLS -----
-sol_test_ols_sgd = [
-    analysis_test.runs[('ols', 'analytical')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'gd')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'sgd')]['y_pred_test'][sort_idx], 
-    x_test[sort_idx]
-]
+ols_data = []
+for method_name, etas, hist_ols, _ in methods_data:
+    for i, eta in enumerate(etas):
+        iterations = len(hist_ols[i])
+        final_mse = hist_ols[i][-1]
+        initial_mse = hist_ols[i][0]
+        
 
-sol_test_ols_sgd_momentum = [
-    analysis_test.runs[('ols', 'analytical')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'momentum')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'sgd_momentum')]['y_pred_test'][sort_idx], 
-    x_test[sort_idx]
-]
+        if final_mse > initial_mse:
+            converged = 'Diverged'
+            final_mse_display = '-'
+        elif len(hist_ols[i]) == num_iters:
+            converged = 'No'
+            final_mse_display = f'{final_mse:.6f}'
+        else:
+            converged = 'Yes'
+            final_mse_display = f'{final_mse:.6f}'
+        
+        ols_data.append({
+            'Method': method_name,
+            'Learning Rate': eta,
+            'Iterations': iterations,
+            'Final MSE': final_mse_display,
+            'Converged': converged
+        })
 
-sol_test_ols_sgd_adagrad = [
-    analysis_test.runs[('ols', 'analytical')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'adagrad')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'sgd_adagrad')]['y_pred_test'][sort_idx], 
-    x_test[sort_idx]
-]
+df_ols = pd.DataFrame(ols_data)
 
-sol_test_ols_sgd_rmsprop = [
-    analysis_test.runs[('ols', 'analytical')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'rmsprop')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'sgd_rmsprop')]['y_pred_test'][sort_idx], 
-    x_test[sort_idx]
-]
-    
-sol_test_ols_sgd_adam = [
-    analysis_test.runs[('ols', 'analytical')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'adam')]['y_pred_test'][sort_idx],
-    analysis_test.runs[('ols', 'sgd_adam')]['y_pred_test'][sort_idx], 
-    x_test[sort_idx]
-]
 
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_momentum, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_adagrad, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_rmsprop, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
-compare_sgd(x, y_noise, y_true, solutions=sol_test_ols_sgd_adam, sample_size=N, degree=degree, lam=lam, type='ols', test=True)
+# ----- RIDGE -----
+ridge_data = []
+for method_name, etas, _, hist_ridge in methods_data:
+    for i, eta in enumerate(etas):
+        iterations = len(hist_ridge[i])
+        final_mse = hist_ridge[i][-1]
+        initial_mse = hist_ridge[i][0]
 
+
+        if final_mse > initial_mse:
+            converged = 'Diverged'
+            final_mse_display = '-'
+        elif len(hist_ridge[i]) == num_iters:
+            converged = 'No'
+            final_mse_display = f'{final_mse:.6f}'
+        else:
+            converged = 'Yes'
+            final_mse_display = f'{final_mse:.6f}'
+
+        ridge_data.append({
+            'Method': method_name,
+            'Learning Rate': eta,
+            'Iterations': iterations,
+            'Final MSE': final_mse_display,
+            'Converged': converged
+        })
+
+df_ridge = pd.DataFrame(ridge_data)
+
+        
+
+print("\n" + "="*80)
+print("OLS RESULTS")
+print("="*80)
+print(df_ols.to_string(index=False))
+
+print("\n\n" + "="*80)
+print("RIDGE RESULTS (λ=0.01)")
+print("="*80)
+print(df_ridge.to_string(index=False))
+print("="*80)
 
 
