@@ -3,6 +3,19 @@ import numpy as np
 import os
 import seaborn as sns
 
+# Set global font sizes for consistency
+plt.rcParams.update(
+    {
+        "font.size": 16,
+        "axes.labelsize": 16,
+        "axes.titlesize": 16,
+        "xtick.labelsize": 16,
+        "ytick.labelsize": 16,
+        "legend.fontsize": 16,
+        "figure.titlesize": 16,
+    }
+)
+
 os.makedirs("figs", exist_ok=True)
 
 
@@ -402,7 +415,7 @@ def compare_gd(
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.legend(fontsize=14)
+    plt.legend(fontsize=16)
     title = (
         f'Test split - GD Methods {type if type else ""}'
         if test
@@ -471,7 +484,7 @@ def compare_sgd(
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.legend(fontsize=14)
+    plt.legend(fontsize=16)
 
     title = (
         f'Test split - SGD Methods {type if type else ""}'
@@ -578,7 +591,7 @@ def plot_diagonal_comparison(results, diagonal_points, n_bootstraps=2000):
             0.15,
             textstr,
             transform=ax.transAxes,
-            fontsize=10,
+            fontsize=14,
             verticalalignment="center",
             horizontalalignment="center",
             bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
@@ -589,14 +602,14 @@ def plot_diagonal_comparison(results, diagonal_points, n_bootstraps=2000):
         ax.set_ylabel("y", fontsize=14)
         ax.set_title(
             f"Data-size {n} with degree={degree}",
-            fontsize=15,
+            fontsize=14,
             fontweight="bold",
         )
-        ax.legend(fontsize=10, loc="upper right", framealpha=0.9)
+        ax.legend(fontsize=14, loc="upper right", framealpha=0.9)
         ax.grid(alpha=0.3)
         ax.set_ylim([-0.3, 1.2])
 
-    plt.tight_layout(pad=3.0)
+    plt.tight_layout(pad=1.5)
     plt.savefig("figs/diagonal_comparison_bootstrap_samples.pdf", dpi=300)
     plt.show()
 
@@ -663,11 +676,11 @@ def plot_bias_variance_decomposition(results, sample_size_idx=0):
     ax.set_ylabel("Error", fontsize=16)
     ax.set_title(
         f"Bias-Variance Decomposition (Sample-size: {sample_size})",
-        fontsize=18,
+        fontsize=16,
         fontweight="bold",
     )
-    ax.tick_params(axis="both", labelsize=14)
-    ax.legend(fontsize=14, loc="best", framealpha=0.9)
+    ax.tick_params(axis="both", labelsize=16)
+    ax.legend(fontsize=16, loc="best", framealpha=0.9)
     ax.grid(alpha=0.3)
 
     # Y-axis limit to focus on relevant range
@@ -682,8 +695,13 @@ def plot_heatmaps(results):
     sample_sizes = results["sample_sizes"]
     degrees = results["degrees"]
 
-    # Create figure with 3 subplots (no sharey due to seaborn compatibility issues)
+    # Create figure with 3 subplots
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+    # Find the best model complexity (lowest MSE)
+    min_row, min_col = np.unravel_index(
+        np.argmin(results["error_matrix"]), results["error_matrix"].shape
+    )
 
     # Error heatmap
     sns.heatmap(
@@ -695,21 +713,15 @@ def plot_heatmaps(results):
         cbar_kws={"label": "MSE"},
         annot=False,
     )
-
-    # Find and mark the best model complexity (lowest MSE)
-    min_row, min_col = np.unravel_index(
-        np.argmin(results["error_matrix"]), results["error_matrix"].shape
-    )
     rect = plt.Rectangle(
         (min_col, min_row), 1, 1, facecolor="none", edgecolor="red", linewidth=2
     )
     axes[0].add_patch(rect)
-
     axes[0].set_title("Test Error (MSE)", fontsize=16, fontweight="bold")
-    axes[0].set_xlabel("Polynomial Degree", fontsize=14)
-    axes[0].set_ylabel("Sample Size (n)", fontsize=14)
-    axes[0].tick_params(axis="x", rotation=0)
-    axes[0].tick_params(axis="y", rotation=0)
+    axes[0].set_xlabel("Polynomial Degree", fontsize=16)
+    axes[0].set_ylabel("Sample Size (n)", fontsize=16)
+    axes[0].tick_params(axis="x", rotation=0, labelsize=14)
+    axes[0].tick_params(axis="y", rotation=0, labelsize=14)
 
     # Bias² heatmap
     sns.heatmap(
@@ -717,15 +729,19 @@ def plot_heatmaps(results):
         ax=axes[1],
         cmap="plasma",
         xticklabels=degrees,
-        yticklabels=sample_sizes,  # Keep the same labels for proper alignment
+        yticklabels=sample_sizes,
         cbar_kws={"label": "Bias²"},
         annot=False,
     )
+    # Add rectangle
+    rect_bias = plt.Rectangle(
+        (min_col, min_row), 1, 1, facecolor="none", edgecolor="red", linewidth=2
+    )
+    axes[1].add_patch(rect_bias)
     axes[1].set_title("Bias²", fontsize=16, fontweight="bold")
-    axes[1].set_xlabel("Polynomial Degree", fontsize=14)
-    axes[1].tick_params(axis="x", rotation=0)
-    axes[1].tick_params(axis="y", rotation=0)
-    # Hide y-axis labels and ticks for middle plot but keep the same scale
+    axes[1].set_xlabel("Polynomial Degree", fontsize=16)
+    axes[1].tick_params(axis="x", rotation=0, labelsize=14)
+    axes[1].tick_params(axis="y", rotation=0, labelsize=14)
     axes[1].set_ylabel("")
     axes[1].set_yticklabels([])
 
@@ -735,15 +751,19 @@ def plot_heatmaps(results):
         ax=axes[2],
         cmap="plasma",
         xticklabels=degrees,
-        yticklabels=sample_sizes,  # Keep the same labels for proper alignment
+        yticklabels=sample_sizes,
         cbar_kws={"label": "Variance"},
         annot=False,
     )
+    # Add rectangle
+    rect_var = plt.Rectangle(
+        (min_col, min_row), 1, 1, facecolor="none", edgecolor="red", linewidth=2
+    )
+    axes[2].add_patch(rect_var)
     axes[2].set_title("Variance", fontsize=16, fontweight="bold")
-    axes[2].set_xlabel("Polynomial Degree", fontsize=14)
-    axes[2].tick_params(axis="x", rotation=0)
-    axes[2].tick_params(axis="y", rotation=0)
-    # Hide y-axis labels and ticks for right plot but keep the same scale
+    axes[2].set_xlabel("Polynomial Degree", fontsize=16)
+    axes[2].tick_params(axis="x", rotation=0, labelsize=14)
+    axes[2].tick_params(axis="y", rotation=0, labelsize=14)
     axes[2].set_ylabel("")
     axes[2].set_yticklabels([])
 
@@ -753,7 +773,7 @@ def plot_heatmaps(results):
     for ax in axes:
         ax.set_ylim(y_min, y_max)
 
-    plt.tight_layout(pad=3.0)
+    plt.tight_layout(pad=1.5)
     plt.savefig("figs/bias_variance_heatmaps.pdf", dpi=300, bbox_inches="tight")
     plt.show()
 
@@ -818,11 +838,11 @@ def plot_cv_vs_bootstrap_comparison(cv_results, bootstrap_results, sample_size_i
     ax.set_ylabel("MSE", fontsize=16)
     ax.set_title(
         f"Bootstrap vs Cross-Validation (OLS, n={sample_size})",
-        fontsize=18,
+        fontsize=16,
         fontweight="bold",
     )
-    ax.tick_params(axis="both", labelsize=14)
-    ax.legend(fontsize=14, loc="best", framealpha=0.9)
+    ax.tick_params(axis="both", labelsize=16)
+    ax.legend(fontsize=16, loc="best", framealpha=0.9)
     ax.grid(alpha=0.3)
 
     ax.set_ylim(
@@ -895,12 +915,13 @@ def plot_cv_heatmaps_multi_noise(
 
         ax.set_title(
             f"{model_names[0]} | {noise_labels[noise_level]}",
-            fontsize=12,
+            fontsize=16,
             fontweight="bold",
         )
-        ax.set_ylabel("Sample Size (n)", fontsize=11)
+        ax.set_ylabel("Sample Size (n)", fontsize=16)
+        ax.tick_params(axis="both", labelsize=14)
         if row == 2:
-            ax.set_xlabel("Polynomial Degree", fontsize=11)
+            ax.set_xlabel("Polynomial Degree", fontsize=16)
         else:
             ax.set_xlabel("")
 
@@ -934,12 +955,13 @@ def plot_cv_heatmaps_multi_noise(
 
         ax.set_title(
             f"{model_names[1]} | {noise_labels[noise_level]}",
-            fontsize=12,
+            fontsize=16,
             fontweight="bold",
         )
         ax.set_ylabel("")
+        ax.tick_params(axis="both", labelsize=14)
         if row == 2:
-            ax.set_xlabel("Polynomial Degree", fontsize=11)
+            ax.set_xlabel("Polynomial Degree", fontsize=16)
         else:
             ax.set_xlabel("")
 
@@ -973,12 +995,13 @@ def plot_cv_heatmaps_multi_noise(
 
         ax.set_title(
             f"{model_names[2]} | {noise_labels[noise_level]}",
-            fontsize=12,
+            fontsize=16,
             fontweight="bold",
         )
         ax.set_ylabel("")
+        ax.tick_params(axis="both", labelsize=14)
         if row == 2:
-            ax.set_xlabel("Polynomial Degree", fontsize=11)
+            ax.set_xlabel("Polynomial Degree", fontsize=16)
         else:
             ax.set_xlabel("")
 
@@ -1068,13 +1091,14 @@ def plot_delta_heatmap_multi_noise(
 
         ax_ridge.set_title(
             f"Ridge | {noise_labels[noise_level]}",
-            fontsize=14,
+            fontsize=16,
             fontweight="bold",
             pad=10,
         )
-        ax_ridge.set_ylabel("Sample Size (n)", fontsize=12)
+        ax_ridge.set_ylabel("Sample Size (n)", fontsize=16)
+        ax_ridge.tick_params(axis="both", labelsize=14)
         if row == 2:  # Bottom row
-            ax_ridge.set_xlabel("Polynomial Degree", fontsize=12)
+            ax_ridge.set_xlabel("Polynomial Degree", fontsize=16)
         else:
             ax_ridge.set_xlabel("")
 
@@ -1109,13 +1133,14 @@ def plot_delta_heatmap_multi_noise(
 
         ax_lasso.set_title(
             f"Lasso | {noise_labels[noise_level]}",
-            fontsize=14,
+            fontsize=16,
             fontweight="bold",
             pad=10,
         )
         ax_lasso.set_ylabel("")
+        ax_lasso.tick_params(axis="both", labelsize=14)
         if row == 2:  # Bottom row
-            ax_lasso.set_xlabel("Polynomial Degree", fontsize=12)
+            ax_lasso.set_xlabel("Polynomial Degree", fontsize=16)
         else:
             ax_lasso.set_xlabel("")
 

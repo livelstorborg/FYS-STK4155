@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import concurrent.futures
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.linear_model import Ridge, Lasso
@@ -313,10 +311,7 @@ def bootstrap_bias_variance_analysis(
 def process_single_sample_size_cv(args):
     """
     Process cross-validation for one sample size.
-
-    FIX: Avoid data leakage by ensuring λ-selection is based on CV folds only.
-         We now store CV means/STD for OLS, Ridge(λ), Lasso(λ).
-         We do NOT evaluate the held-out test set for every λ (no test-peeking).
+    Uses k-fold CV on the FULL dataset.
     """
     (n, maxdegree, k_folds, lambda_values, noise_std, random_state) = args
 
@@ -324,7 +319,7 @@ def process_single_sample_size_cv(args):
 
     np.random.seed(random_state)
 
-    # Initialize results for this sample size (CV means/STD per degree)
+    # Initialize results for this sample size
     ols_results = {"mse": np.zeros(maxdegree), "std": np.zeros(maxdegree)}
     ridge_results = {
         lam: {"mse": np.zeros(maxdegree), "std": np.zeros(maxdegree)}
@@ -341,45 +336,36 @@ def process_single_sample_size_cv(args):
     y_true = runge(x)
     y = y_true + epsilon
 
-    # External test split (kept here, but NOT used to pick λ anymore)
-    indices = np.arange(n)
-    train_idx, test_idx = train_test_split(
-        indices, test_size=0.25, random_state=random_state
-    )
-    x_train_full = x[train_idx]
-    y_train_full = y[train_idx]
-    # x_test = x[test_idx]; y_test = y[test_idx]  # not used here to avoid leakage
-
-    # K-fold CV on the 75% train portion
+    # K-fold CV on the FULL dataset
     kf = KFold(n_splits=k_folds, shuffle=True, random_state=random_state)
 
     for degree in range(1, maxdegree + 1):
-        # Precompute polynomial features on training portion
-        X_train_full = polynomial_features(x_train_full, degree)
+        # Precompute polynomial features
+        X_full = polynomial_features(x, degree)
 
-        # Storage for fold MSEs (these are CV validation errors)
+        # Storage for fold MSEs (CV validation errors)
         ols_fold_mse = []
         ridge_fold_mse = {lam: [] for lam in lambda_values}
         lasso_fold_mse = {lam: [] for lam in lambda_values}
 
-        # ---- K-fold CV loop ----
-        for train_fold_idx, val_fold_idx in kf.split(X_train_full):
-            X_train = X_train_full[train_fold_idx]
-            X_val = X_train_full[val_fold_idx]
-            y_train = y_train_full[train_fold_idx]
-            y_val = y_train_full[val_fold_idx]
+        #  K-fold CV loop
+        for train_fold_idx, val_fold_idx in kf.split(X_full):
+            X_train = X_full[train_fold_idx]
+            X_val = X_full[val_fold_idx]
+            y_train = y[train_fold_idx]
+            y_val = y[val_fold_idx]
 
-            # Scale (fit on train fold, apply to val fold)
+            # Scale
             X_train_s, y_train_s, X_mean, X_std, y_mean = scale_data(X_train, y_train)
             X_val_s, y_val_s, _, _, _ = scale_data(X_val, y_val, X_mean, X_std, y_mean)
             y_val_unscaled = y_val_s + y_mean
 
-            # ----- OLS (CV validation error) -----
+            # OLS (CV validation error)
             theta_ols = OLS_parameters(X_train_s, y_train_s)
             y_pred_ols = X_val_s @ theta_ols + y_mean
             ols_fold_mse.append(mean_squared_error(y_val_unscaled, y_pred_ols))
 
-            # ----- Ridge (CV validation error per λ) -----
+            # Ridge (CV validation error per lambda)
             for lam in lambda_values:
                 ridge_model = Ridge(alpha=lam, fit_intercept=False, solver="svd")
                 ridge_model.fit(X_train_s, y_train_s)
@@ -388,7 +374,7 @@ def process_single_sample_size_cv(args):
                     mean_squared_error(y_val_unscaled, y_pred_ridge)
                 )
 
-            # ----- Lasso (CV validation error per λ) with warm-start path -----
+            # Lasso (CV validation error per lambda) with warm-start
             n_fold = X_train_s.shape[0]
             alpha_max = np.max(np.abs(X_train_s.T @ y_train_s)) / n_fold
             n_path = max(10, len(lambda_values))
@@ -408,7 +394,7 @@ def process_single_sample_size_cv(args):
             patience = 2
             bad = 0
 
-            # map your reporting grid lambda_values to the closest point on the path
+            # mapping from my lambda grid to the closest point on the path
             idx_map = {
                 lam: int(np.argmin(np.abs(lams_desc - lam))) for lam in lambda_values
             }
@@ -428,17 +414,17 @@ def process_single_sample_size_cv(args):
                     if bad >= patience:
                         break
 
-                # record CV MSE for those λ on your original grid that map here
+                # record CV MSE for lambda on my original grid that map here
                 for lam, j_closest in idx_map.items():
                     if j_closest == j:
                         lasso_fold_mse[lam].append(mse_val)
 
-            # Fill any missing λ entries for this fold with the best observed val-MSE
+            # Fill any missing lambda entries for this fold with the best observed val-MSE
             for lam in lambda_values:
                 if len(lasso_fold_mse[lam]) < len(ols_fold_mse):
                     lasso_fold_mse[lam].append(best_val)
 
-        # ---- Aggregate CV across folds (means & stds). This is what downstream uses. ----
+        # Aggregate CV across folds
         ols_results["mse"][degree - 1] = np.mean(ols_fold_mse)
         ols_results["std"][degree - 1] = np.std(ols_fold_mse)
 
@@ -465,9 +451,7 @@ def cross_validation_analysis(
 ):
     """
     Perform k-fold cross-validation for OLS, Ridge, and Lasso regression.
-
-    Uses CV for stability estimation but reports test MSE on held-out 25% test set
-    for direct comparison with bootstrap results.
+    Uses full dataset for k-fold CV (no separate test set).
 
     Parameters
     ----------
@@ -648,7 +632,7 @@ if __name__ == "__main__":
     print("=" * 70)
 
     k_folds = 5
-    lambda_values = np.logspace(-6, 1, 20)
+    lambda_values = np.logspace(-5, 2, 20)  # lambda grid for Ridge and Lasso
 
     start = time.time()
     cv_results = cross_validation_analysis(
@@ -667,58 +651,38 @@ if __name__ == "__main__":
     # Generate CV comparison plot
     plot_cv_vs_bootstrap_comparison(cv_results, bootstrap_results, sample_size_idx=0)
 
-    # # ===================================
-    # # MULTI-NOISE ANALYSIS
-    # # ===================================
-    # print("\n" + "=" * 70)
-    # print("MULTI-NOISE CROSS-VALIDATION ANALYSIS")
-    # print("=" * 70)
+    # ===================================
+    # MULTI-NOISE ANALYSIS
+    # ===================================
+    print("\n" + "=" * 70)
+    print("MULTI-NOISE CROSS-VALIDATION ANALYSIS")
+    print("=" * 70)
 
-    # # Create results directory
-    # os.makedirs("cv_results", exist_ok=True)
+    # Create results directory
+    os.makedirs("cv_results", exist_ok=True)
 
-    # # Dense sampling around n=275
-    # sample_sizes = [
-    #     150,
-    #     175,
-    #     200,
-    #     225,
-    #     250,
-    #     275,
-    #     300,
-    #     325,
-    #     350,
-    #     375,
-    #     400,
-    #     425,
-    #     450,
-    #     475,
-    #     500,
-    #     525,
-    #     550,
-    #     575,
-    # ]
-    # test_size = 0.25
-    # parallel = True
-    # max_workers = 9
-    # maxdegree = 25
-    # k_folds = 5
-    # lambda_values = np.logspace(-6, 1, 20)
+    test_size = 0.25
+    parallel = True
+    max_workers = 9
+    maxdegree = 20
+    k_folds = 5
     seeds = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 
-    # noise_configs = {
-    #     "low": {"noise_std": 0.1, "description": "Low noise (σ=0.1)"},
-    #     "medium": {"noise_std": 0.2, "description": "Medium noise (σ=0.2)"},
-    #     "high": {"noise_std": 0.3, "description": "High noise (σ=0.3)"},
-    # }
+    noise_configs = {
+        "low": {"noise_std": 0.1, "description": "Low noise (σ=0.1)"},
+        "medium": {"noise_std": 0.2, "description": "Medium noise (σ=0.2)"},
+        "high": {"noise_std": 0.3, "description": "High noise (σ=0.3)"},
+    }
 
-    # print(
-    #     f"Configuration: {len(sample_sizes)} sample sizes, degree {maxdegree}, {k_folds}-fold CV"
-    # )
-    # print(f"Seeds: {seeds}, Lambda grid: {len(lambda_values)} values\n")
+    print(
+        f"Configuration: {len(sample_sizes)} sample sizes, degree {maxdegree}, {k_folds}-fold CV"
+    )
+    print(f"Seeds: {seeds}, Lambda grid: {len(lambda_values)} values\n")
 
+    total_start = time.time()
+
+    # ################# Big computation block commented out to avoid long runtimes ##################
     # # # Run CV for all noise levels and seeds
-    # total_start = time.time()
 
     # for noise_level, config in noise_configs.items():
     #     print(f"{noise_level.upper()}: {config['description']}")
@@ -747,12 +711,12 @@ if __name__ == "__main__":
     #         print(f"  Seed {seed}: {time.time() - start:.1f}s")
     #     print()
 
-    # total_elapsed = time.time() - total_start
-    # print(f"Total computation: {total_elapsed:.1f}s ({total_elapsed/60:.1f} min)\n")
-
     # ===================================
     # AGGREGATE AND ANALYZE RESULTS
     # ===================================
+    total_elapsed = time.time() - total_start
+    print(f"Total computation: {total_elapsed:.1f}s ({total_elapsed/60:.1f} min)\n")
+
     print("=" * 70)
     print("AGGREGATING RESULTS ACROSS SEEDS")
     print("=" * 70 + "\n")
