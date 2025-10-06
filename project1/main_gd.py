@@ -37,23 +37,16 @@ data = [X_train_s, X_test_s, y_train_s, y_test_s, x_train, x_test, y_mean]
 
 
 eta_list_gd_ols = [0.37, 0.365, 0.2, 0.1]
-eta_list_momentum_ols = [0.7, 0.3, 0.1, 0.05]
+eta_list_momentum_ols = [0.4, 0.3, 0.1, 0.05]
 eta_list_adagrad_ols = [0.3, 0.25, 0.15, 0.1]
 eta_list_rmsprop_ols = [0.02, 0.01, 0.005, 0.001]
 eta_list_adam_ols = [0.2, 0.1, 0.05, 0.02]
 
-# eta_list_gd_ridge = [0.37, 0.365, 0.2, 0.1]
-# eta_list_momentum_ridge = [0.22, 0.2, 0.15, 0.05]
-# eta_list_adagrad_ridge = [0.225, 0.22, 0.215, 0.15]
-# eta_list_rmsprop_ridge = [0.01, 0.005, 0.002, 0.001]
-# eta_list_adam_ridge = [0.25, 0.2, 0.1, 0.05, 0.02]
-
-
-eta_list_gd_ridge = eta_list_gd_ols
-eta_list_momentum_ridge = eta_list_momentum_ols
-eta_list_adagrad_ridge = eta_list_adagrad_ols
-eta_list_rmsprop_ridge = eta_list_rmsprop_ols
-eta_list_adam_ridge = eta_list_adam_ols
+eta_list_gd_ridge = [0.37, 0.365, 0.2, 0.1]
+eta_list_momentum_ridge = [0.22, 0.2, 0.15, 0.05]
+eta_list_adagrad_ridge = [0.225, 0.22, 0.215, 0.15]
+eta_list_rmsprop_ridge = [0.01, 0.005, 0.002, 0.001]
+eta_list_adam_ridge = [0.25, 0.2, 0.1, 0.05]
 
 
 # ============================================================================
@@ -94,7 +87,7 @@ optimizers_ridge = {
 ) = [], [], [], [], []
 
 
-# Run OLS with OLS-specific eta values
+# Run OLS with OLS-specific eta valuesx
 for opt_name, eta_list in optimizers_ols.items():
     for eta in eta_list:
         analysis = RegressionAnalysis(
