@@ -248,7 +248,7 @@ def gradient_descent(
             mse_history.append(epoch_mse)
 
             status = check_convergence_stochastic(
-                "Gradient Descent",
+                method=method,
                 eta=eta,
                 epoch=epoch,
                 epoch_mse=epoch_mse,
