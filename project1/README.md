@@ -6,26 +6,38 @@
 - Simon S. Thommesen
 - Henrik Haug
 
-## Directory structure 
-- 'figs' : contains all figures generated
-- 'src' : 
-  - __init__.py: makes src callable as a package
-  - plotting.py: plotting functions
-  - regression.py: class for regression analysis
-  - utils.py: helper functions for RegressionAnalysis class
-- main_ols.py
-- main_ridge.py
-- main_gd.py
-- main_gd_comparison.py
-- Makefile : for running the main files
-- pyproject.toml: for package management (using uv)
-- uv.lock: for package management (using uv)
-- requirements.txt: for package management
+
+## Description
+This project implements and compares various regression methods for fitting the Runge function
+$$
+\frac{1}{1 + 25x^2}.
+$$
+We analyze Ordinary Least Squares (OLS), Ridge regression, and Lasso regression, exploring the bias-variance tradeoff and implementing different gradient descent optimization methods.
+
+## Directory structure (project1)
+- 'code' : contains all code files
+  - 'figs' : contains all figures generated, folder is created when running the main files or Jupyter Notebook (if plt.savefig is uncommented)
+  - 'src' : 
+    - __init__.py: makes src callable as a package
+    - plotting.py: plotting functions
+    - regression.py: class for regression analysis
+    - utils.py: helper functions for RegressionAnalysis class
+  - .python-version: specifies python version (needed for uv)
+  - main_gd.py
+  - main_lasso.py
+  - main_ols.py
+  - main_resampling.py
+  - main_ridge.py
+  - main_stochastic.py
+  - results.ipynb: Jupyter Notebook to run all main files and generate all figures
+  - Makefile: for cleaning the figs folder
+  - pyproject.toml: for package management (uv)
+  - uv.lock: for package management (uv)
 
 
 
 ## Run the Code 
-### Using uv as package manager (recommended)
+### Using uv as package manager
 If you don't have uv, install it using homebrew:
 ```bash
 brew install uv
@@ -41,16 +53,5 @@ Run files:
 uv run main_<name>.py
 ```
 
-### Using pip
-Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+**To run all main files and generate all figures, you can also use the Jupyter Notebook `results.ipynb`.**
 
-Run files using Python:
-```bash
-python3 main_<name>.py
-```
-
-## Description
-This project implements and compares various regression methods for fitting the Runge function f(x) = 1/(1 + 25x²). We analyze Ordinary Least Squares (OLS), Ridge regression, and Lasso regression, exploring the bias-variance tradeoff and implementing different gradient descent optimization methods.
