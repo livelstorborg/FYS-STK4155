@@ -32,7 +32,10 @@ SAMPLE_SIZES = [
 ]
 LAMBDAS = np.logspace(-5, 2, 8)
 DEGREES = range(1, 16)
-
+"""
+Note: To produce MSE and R2 plots (exactly as in the report), use 
+DEGREES = range(1, 36)
+"""
 
 # ============================================================================
 # DATA GENERATION AND MODEL FITTING
