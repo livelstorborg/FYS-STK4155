@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import os
 
 os.makedirs("figs", exist_ok=True)
@@ -20,7 +21,6 @@ def setup_plot_formatting():
     plt.tight_layout()
 
 
-
 def mse_degree_ols(results):
     """
     Plot MSE vs polynomial degree for training and test data.
@@ -32,7 +32,6 @@ def mse_degree_ols(results):
     sample_size : int
         Sample size to plot
     """
-    
 
     plt.figure(figsize=(8, 6))
     plt.plot(
@@ -42,7 +41,7 @@ def mse_degree_ols(results):
         label="MSE (train)",
         linewidth=2,
         markersize=6,
-        color='darkviolet'
+        color="darkviolet",
     )
     plt.plot(
         results["degrees"],
@@ -51,18 +50,26 @@ def mse_degree_ols(results):
         label="MSE (test)",
         linewidth=2,
         markersize=6,
-        color='#D63290'
+        color="#D63290",
     )
 
     min_test_mse = min(results["test_mse"])
     min_degree = results["degrees"][results["test_mse"].index(min_test_mse)]
-    plt.plot(min_degree, min_test_mse, '*', markersize=20, markeredgewidth=2, color='#F2B44D', markeredgecolor='black',
-         label=f'Min Test MSE: {min_test_mse:.2f}') 
-    
+    plt.plot(
+        min_degree,
+        min_test_mse,
+        "*",
+        markersize=20,
+        markeredgewidth=2,
+        color="#F2B44D",
+        markeredgecolor="black",
+        label=f"Min Test MSE: {min_test_mse:.2f}",
+    )
+
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"MSE", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/mse_vs_degree_ols.pdf", bbox_inches='tight')
+    plt.savefig("figs/mse_vs_degree_ols.pdf", bbox_inches="tight")
     plt.show()
 
 
@@ -85,7 +92,7 @@ def r2_degree_ols(results):
         label="R² (train)",
         linewidth=2,
         markersize=6,
-        color='darkviolet'
+        color="darkviolet",
     )
     plt.plot(
         results["degrees"],
@@ -94,27 +101,33 @@ def r2_degree_ols(results):
         label="R² (test)",
         linewidth=2,
         markersize=6,
-        color='#D63290'
+        color="#D63290",
     )
-
-
 
     max_test_r2 = max(results["test_r2"])
     max_degree = results["degrees"][results["test_r2"].index(max_test_r2)]
 
-    plt.plot(max_degree, max_test_r2, '*', markersize=20, markeredgewidth=2, color='#F2B44D', markeredgecolor='black',
-         label=f'Max Test R²: {max_test_r2:.2f}')
+    plt.plot(
+        max_degree,
+        max_test_r2,
+        "*",
+        markersize=20,
+        markeredgewidth=2,
+        color="#F2B44D",
+        markeredgecolor="black",
+        label=f"Max Test R²: {max_test_r2:.2f}",
+    )
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"R²", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/r2_vs_degree_ols.pdf", bbox_inches='tight')
+    plt.savefig("figs/r2_vs_degree_ols.pdf", bbox_inches="tight")
     plt.show()
 
 
 def plot_theta(theta: list, method: str):
     """
     Plot the model parameters (theta) for a given method.
-    
+
     Parameters
     ----------
     theta : list or np.ndarray
@@ -127,20 +140,25 @@ def plot_theta(theta: list, method: str):
     setup_plot_formatting()
     for i, theta in enumerate(theta):
         for param in theta:
-            plt.scatter(i+1, param, label=f"θ_{i}" if i == 0 else "", s=100, color='mediumorchid', alpha=0.5, edgecolors='black')
-    plt.xlabel('Polynomial Degree', fontsize=16)
-    plt.ylabel(rf'$\theta_{{{method}}}$', fontsize=16)
-    plt.savefig(f"figs/theta_{method.lower()}.pdf", bbox_inches='tight')
+            plt.scatter(
+                i + 1,
+                param,
+                label=f"θ_{i}" if i == 0 else "",
+                s=100,
+                color="mediumorchid",
+                alpha=0.5,
+                edgecolors="black",
+            )
+    plt.xlabel("Polynomial Degree", fontsize=16)
+    plt.ylabel(rf"$\theta_{{{method}}}$", fontsize=16)
+    plt.savefig(f"figs/theta_{method.lower()}.pdf", bbox_inches="tight")
     plt.show()
-
-
-
 
 
 def mse_degree_ridge(results):
     """
     Plot MSE vs polynomial degree for a specific lambda.
-    
+
     Parameters
     ----------
     results_for_N : dict
@@ -148,7 +166,7 @@ def mse_degree_ridge(results):
     lam : float
         Lambda value to plot
     """
-    
+
     plt.figure(figsize=(8, 6))
     plt.plot(
         results["degrees"],
@@ -157,7 +175,7 @@ def mse_degree_ridge(results):
         label="MSE (train)",
         linewidth=2,
         markersize=6,
-        color='darkviolet'
+        color="darkviolet",
     )
     plt.plot(
         results["degrees"],
@@ -166,19 +184,27 @@ def mse_degree_ridge(results):
         label="MSE (test)",
         linewidth=2,
         markersize=6,
-        color='#D63290'
+        color="#D63290",
     )
 
-    lam = results['lambda']
+    lam = results["lambda"]
     min_test_mse = min(results["test_mse"])
     min_degree = results["degrees"][results["test_mse"].index(min_test_mse)]
-    plt.plot(min_degree, min_test_mse, '*', markersize=20, markeredgewidth=2, color='#F2B44D', markeredgecolor='black',
-         label=f'Min Test MSE: {min_test_mse:.2f}') 
-    
+    plt.plot(
+        min_degree,
+        min_test_mse,
+        "*",
+        markersize=20,
+        markeredgewidth=2,
+        color="#F2B44D",
+        markeredgecolor="black",
+        label=f"Min Test MSE: {min_test_mse:.2f}",
+    )
+
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel("MSE", fontsize=16)
     setup_plot_formatting()
-    plt.savefig(f"figs/mse_vs_degree_ridge.pdf", bbox_inches='tight')
+    plt.savefig(f"figs/mse_vs_degree_ridge.pdf", bbox_inches="tight")
     plt.show()
 
 
@@ -194,7 +220,7 @@ def r2_degree_ridge(results):
         label="R² (train)",
         linewidth=2,
         markersize=6,
-        color='darkviolet'
+        color="darkviolet",
     )
     plt.plot(
         results["degrees"],
@@ -203,46 +229,35 @@ def r2_degree_ridge(results):
         label="R² (test)",
         linewidth=2,
         markersize=6,
-        color='#D63290'
+        color="#D63290",
     )
 
     max_test_r2 = max(results["test_r2"])
     max_degree = results["degrees"][results["test_r2"].index(max_test_r2)]
 
-    plt.plot(max_degree, max_test_r2, '*', markersize=20, markeredgewidth=2, color='#F2B44D', markeredgecolor='black',
-         label=f'Max Test R²: {max_test_r2:.2f}')
+    plt.plot(
+        max_degree,
+        max_test_r2,
+        "*",
+        markersize=20,
+        markeredgewidth=2,
+        color="#F2B44D",
+        markeredgecolor="black",
+        label=f"Max Test R²: {max_test_r2:.2f}",
+    )
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel("R²", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/r2_vs_degree_ridge.pdf", bbox_inches='tight')
+    plt.savefig("figs/r2_vs_degree_ridge.pdf", bbox_inches="tight")
     plt.show()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def compare(x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False):
+def compare(
+    x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False
+):
     """
     Plot true function and model predictions (analytical/sklearn + GD).
-    
+
     Parameters
     ----------
     type : str
@@ -251,7 +266,7 @@ def compare(x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, 
         If True, highlights test data points in a different color
     """
     # Use type parameter to determine what baseline to expect
-    if type == 'lasso':
+    if type == "lasso":
         y_scikit, y_gd, x_plotting = solutions
         lasso = True
     else:
@@ -260,66 +275,106 @@ def compare(x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, 
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    
+
     if test:
         test_mask = np.isin(x, x_plotting)
         train_mask = ~test_mask
-        
-        plt.scatter(x[train_mask], y_noise[train_mask], color='lightgray', alpha=0.5, s=50, label=r"$y_{noise}$ (train)")
-        plt.scatter(x[test_mask], y_noise[test_mask], color='dimgray', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
+
+        plt.scatter(
+            x[train_mask],
+            y_noise[train_mask],
+            color="lightgray",
+            alpha=0.5,
+            s=50,
+            label=r"$y_{noise}$ (train)",
+        )
+        plt.scatter(
+            x[test_mask],
+            y_noise[test_mask],
+            color="dimgray",
+            alpha=0.7,
+            s=50,
+            label=r"$y_{noise}$ (test)",
+        )
     else:
-        plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
-    
+        plt.scatter(
+            x, y_noise, color="lightgray", alpha=0.7, s=50, label=r"$y_{noise}$"
+        )
+
     if lasso:
         plt.plot(x_plotting, y_scikit, label=f"Scikit-Learn, λ={lam:.0e}")
     else:
         plt.plot(x_plotting, y_analytical, label=f"Analytical, λ={lam:.0e}")
-    
+
     plt.plot(x_plotting, y_gd, label=f"GD, λ={lam:.0e}")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
     plt.legend(fontsize=16)
-    
-    title = f'Test split - {type if type else "Comparison"}' if test else f'Full dataset - {type if type else "Comparison"}'
+
+    title = (
+        f"Test split - {type if type else 'Comparison'}"
+        if test
+        else f"Full dataset - {type if type else 'Comparison'}"
+    )
     plt.title(title, fontsize=16)
     plt.show()
 
 
-def compare_gd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False):
+def compare_gd(
+    x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False
+):
     """
     Plotting solutions using different methods for computing the optimal parameters (gradient descent).
-    
+
     Parameters
     ----------
     test : bool
         If True, highlights test data points in a different color
     """
-    
-    if type == 'lasso':
+
+    if type == "lasso":
         y_scikit, y_gd, y_momentum, y_adagrad, y_rmsprop, y_adam, x_plotting = solutions
         lasso = True
     else:
-        y_analytical, y_gd, y_momentum, y_adagrad, y_rmsprop, y_adam, x_plotting = solutions
+        y_analytical, y_gd, y_momentum, y_adagrad, y_rmsprop, y_adam, x_plotting = (
+            solutions
+        )
         lasso = False
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    
+
     if test:
         # Find which points from the full dataset are NOT in the test set (i.e., training points)
         # Create a mask for test points
         test_mask = np.isin(x, x_plotting)
         train_mask = ~test_mask
-        
+
         # Plot training points in light gray
-        plt.scatter(x[train_mask], y_noise[train_mask], color='lightgray', alpha=0.5, s=50, label=r"$y_{noise}$ (train)")
+        plt.scatter(
+            x[train_mask],
+            y_noise[train_mask],
+            color="lightgray",
+            alpha=0.5,
+            s=50,
+            label=r"$y_{noise}$ (train)",
+        )
         # Plot test points in a different color to highlight them
-        plt.scatter(x[test_mask], y_noise[test_mask], color='dimgray', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
+        plt.scatter(
+            x[test_mask],
+            y_noise[test_mask],
+            color="dimgray",
+            alpha=0.7,
+            s=50,
+            label=r"$y_{noise}$ (test)",
+        )
     else:
         # Plot all data points in one color
-        plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
-    
+        plt.scatter(
+            x, y_noise, color="lightgray", alpha=0.7, s=50, label=r"$y_{noise}$"
+        )
+
     if lasso:
         plt.plot(x_plotting, y_scikit, label="Scikit-Learn")
     else:
@@ -334,15 +389,21 @@ def compare_gd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=Non
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
     plt.legend(fontsize=14)
-    title = f'Test split - GD Methods {type if type else ""}' if test else f'Full dataset - GD Methods {type if type else ""}'
+    title = (
+        f"Test split - GD Methods {type if type else ''}"
+        if test
+        else f"Full dataset - GD Methods {type if type else ''}"
+    )
     plt.title(title, fontsize=16)
     plt.show()
 
 
-def compare_sgd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False):
+def compare_sgd(
+    x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False
+):
     """
     Plot true function and model predictions (analytical/sklearn + GD + SGD).
-    
+
     Parameters
     ----------
     type : str
@@ -351,7 +412,7 @@ def compare_sgd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=No
         If True, highlights test data points in a different color
     """
     # Use type parameter to determine what baseline to expect
-    if type == 'lasso':
+    if type == "lasso":
         y_pred_sklearn, y_pred_gd, y_pred_sgd, x_plotting = solutions
         lasso = True
     else:
@@ -360,30 +421,70 @@ def compare_sgd(x, y_noise, y_true, solutions, sample_size, degree, lam, type=No
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, y_true, label="Runge function")
-    
+
     if test:
         test_mask = np.isin(x, x_plotting)
         train_mask = ~test_mask
-        
-        plt.scatter(x[train_mask], y_noise[train_mask], color='lightgray', alpha=0.5, s=50, label=r"$y_{noise}$ (train)")
-        plt.scatter(x[test_mask], y_noise[test_mask], color='dimgray', alpha=0.7, s=50, label=r"$y_{noise}$ (test)")
+
+        plt.scatter(
+            x[train_mask],
+            y_noise[train_mask],
+            color="lightgray",
+            alpha=0.5,
+            s=50,
+            label=r"$y_{noise}$ (train)",
+        )
+        plt.scatter(
+            x[test_mask],
+            y_noise[test_mask],
+            color="dimgray",
+            alpha=0.7,
+            s=50,
+            label=r"$y_{noise}$ (test)",
+        )
     else:
-        plt.scatter(x, y_noise, color='lightgray', alpha=0.7, s=50, label=r"$y_{noise}$")
-    
+        plt.scatter(
+            x, y_noise, color="lightgray", alpha=0.7, s=50, label=r"$y_{noise}$"
+        )
+
     if lasso:
         plt.plot(x_plotting, y_pred_sklearn, label=f"Scikit-Learn, λ={lam:.0e}")
     else:
         plt.plot(x_plotting, y_pred_analytical, label=f"Analytical, λ={lam:.0e}")
-    
+
     plt.plot(x_plotting, y_pred_gd, label=f"GD, λ={lam:.0e}")
     plt.plot(x_plotting, y_pred_sgd, label=f"SGD, λ={lam:.0e}")
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
     plt.legend(fontsize=14)
-    
-    title = f'Test split - SGD Methods {type if type else ""}' if test else f'Full dataset - SGD Methods {type if type else ""}'
+
+    title = (
+        f"Test split - SGD Methods {type if type else ''}"
+        if test
+        else f"Full dataset - SGD Methods {type if type else ''}"
+    )
     plt.title(title, fontsize=16)
     plt.show()
 
 
+def print_dataframe(df: pd.DataFrame, header: str, divider: str):
+    """
+    Function that prints a pd.DataFrame with good formatting.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Dataframe that is printed
+    header: string
+        Header
+    divider: str
+        symbol used for dividing tables and header
+
+    """
+
+    print("\n" + divider * 80)
+    print(header)
+    print("=" * 80)
+    print(df.to_string(index=False))
+    print("\n" + divider * 80)
