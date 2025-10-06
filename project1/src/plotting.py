@@ -712,74 +712,96 @@ def plot_heatmaps(results):
     degrees = results["degrees"]
 
     # Create figure with 3 subplots
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
 
     # Find the best model complexity (lowest MSE)
     min_row, min_col = np.unravel_index(
         np.argmin(results["error_matrix"]), results["error_matrix"].shape
     )
 
+    # Colorbar configuration
+    cbar_kws = {
+        "aspect": 30,  
+        "pad": 0.02       
+    }
+
+    x_ticks_fontsize = 10
+
     # Error heatmap
-    sns.heatmap(
+    im0 = sns.heatmap(
         results["error_matrix"],
         ax=axes[0],
         cmap="plasma",
         xticklabels=degrees,
         yticklabels=sample_sizes,
-        cbar_kws={"label": "MSE"},
+        cbar_kws=cbar_kws,
         annot=False,
+        linewidths=0.2,
+        linecolor=(1, 1, 1, 0.2)
     )
+    # Modify colorbar tick label size
+    cbar0 = im0.collections[0].colorbar
+    cbar0.ax.tick_params(labelsize=12)
+    
     rect = plt.Rectangle(
         (min_col, min_row), 1, 1, facecolor="none", edgecolor="red", linewidth=2
     )
     axes[0].add_patch(rect)
-    axes[0].set_title("Test Error (MSE)", fontsize=16, fontweight="bold")
+    axes[0].set_title("Test Error (MSE)", fontsize=18, fontweight="bold")
     axes[0].set_xlabel("Polynomial Degree", fontsize=16)
     axes[0].set_ylabel("Sample Size (n)", fontsize=16)
-    axes[0].tick_params(axis="x", rotation=0, labelsize=14)
-    axes[0].tick_params(axis="y", rotation=0, labelsize=14)
+    axes[0].tick_params(axis="x", rotation=0, labelsize=x_ticks_fontsize)
+    axes[0].tick_params(axis="y", rotation=0, labelsize=12)
 
     # Bias² heatmap
-    sns.heatmap(
+    im1 = sns.heatmap(
         results["bias_squared_matrix"],
         ax=axes[1],
         cmap="plasma",
         xticklabels=degrees,
         yticklabels=sample_sizes,
-        cbar_kws={"label": "Bias²"},
+        cbar_kws=cbar_kws,
         annot=False,
+        linewidths=0.3,
+        linecolor=(1, 1, 1, 0.3)
     )
-    # Add rectangle
+    cbar1 = im1.collections[0].colorbar
+    cbar1.ax.tick_params(labelsize=12)
+    
     rect_bias = plt.Rectangle(
         (min_col, min_row), 1, 1, facecolor="none", edgecolor="red", linewidth=2
     )
     axes[1].add_patch(rect_bias)
-    axes[1].set_title("Bias²", fontsize=16, fontweight="bold")
+    axes[1].set_title("Bias²", fontsize=18, fontweight="bold")
     axes[1].set_xlabel("Polynomial Degree", fontsize=16)
-    axes[1].tick_params(axis="x", rotation=0, labelsize=14)
-    axes[1].tick_params(axis="y", rotation=0, labelsize=14)
+    axes[1].tick_params(axis="x", rotation=0, labelsize=x_ticks_fontsize)
+    axes[1].tick_params(axis="y", rotation=0, labelsize=12)
     axes[1].set_ylabel("")
     axes[1].set_yticklabels([])
 
     # Variance heatmap
-    sns.heatmap(
+    im2 = sns.heatmap(
         results["variance_matrix"],
         ax=axes[2],
         cmap="plasma",
         xticklabels=degrees,
         yticklabels=sample_sizes,
-        cbar_kws={"label": "Variance"},
+        cbar_kws=cbar_kws,
         annot=False,
+        linewidths=0.3,
+        linecolor=(1, 1, 1, 0.3)
     )
-    # Add rectangle
+    cbar2 = im2.collections[0].colorbar
+    cbar2.ax.tick_params(labelsize=12)
+    
     rect_var = plt.Rectangle(
         (min_col, min_row), 1, 1, facecolor="none", edgecolor="red", linewidth=2
     )
     axes[2].add_patch(rect_var)
-    axes[2].set_title("Variance", fontsize=16, fontweight="bold")
+    axes[2].set_title("Variance", fontsize=18, fontweight="bold")
     axes[2].set_xlabel("Polynomial Degree", fontsize=16)
-    axes[2].tick_params(axis="x", rotation=0, labelsize=14)
-    axes[2].tick_params(axis="y", rotation=0, labelsize=14)
+    axes[2].tick_params(axis="x", rotation=0, labelsize=x_ticks_fontsize)
+    axes[2].tick_params(axis="y", rotation=0, labelsize=12)
     axes[2].set_ylabel("")
     axes[2].set_yticklabels([])
 
@@ -789,10 +811,10 @@ def plot_heatmaps(results):
     for ax in axes:
         ax.set_ylim(y_min, y_max)
 
-    plt.tight_layout(pad=1.5)
+    plt.subplots_adjust(wspace=0.15)  # Control horizontal spacing between subplots
+    plt.tight_layout(pad=1.0)
     plt.savefig("figs/bias_variance_heatmaps.pdf", dpi=300, bbox_inches="tight")
     plt.show()
-
 
 # cross validation plots
 def plot_cv_vs_bootstrap_comparison(cv_results, bootstrap_results, sample_size_idx=0):
@@ -871,6 +893,10 @@ def plot_cv_vs_bootstrap_comparison(cv_results, bootstrap_results, sample_size_i
     plt.show()
 
 
+
+
+
+
 def plot_cv_heatmaps_multi_noise(
     noise_results_dict,
     sample_sizes,
@@ -897,6 +923,14 @@ def plot_cv_heatmaps_multi_noise(
     noise_labels = {"low": "σ=0.1", "medium": "σ=0.2", "high": "σ=0.3"}
     model_names = ["OLS", "Ridge (Best λ)", "Lasso (Best λ)"]
 
+    # Colorbar configuration (matching your preferences)
+    cbar_kws = {
+        "aspect": 30,
+        "pad": 0.02
+    }
+    
+    x_ticks_fontsize = 11
+
     for row, noise_level in enumerate(noise_order):
         cv_results = noise_results_dict[noise_level]["cv_results"]
         lambda_values = cv_results["lambda_values"]
@@ -905,15 +939,21 @@ def plot_cv_heatmaps_multi_noise(
         ax = axes[row, 0]
         ols_mse = cv_results["ols"]["mse_matrix"]
 
-        sns.heatmap(
+        im = sns.heatmap(
             ols_mse,
             cmap="plasma",
             xticklabels=degrees,
             yticklabels=sample_sizes,
-            cbar_kws={"label": "MSE"},
+            cbar_kws=cbar_kws,
             annot=False,
             ax=ax,
+            linewidths=0.2,
+            linecolor=(1, 1, 1, 0.2)
         )
+        
+        # Modify colorbar tick label size
+        cbar = im.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=12)
 
         # Mark minimum
         min_idx = np.unravel_index(np.argmin(ols_mse), ols_mse.shape)
@@ -931,11 +971,12 @@ def plot_cv_heatmaps_multi_noise(
 
         ax.set_title(
             f"{model_names[0]} | {noise_labels[noise_level]}",
-            fontsize=16,
+            fontsize=18,
             fontweight="bold",
         )
         ax.set_ylabel("Sample Size (n)", fontsize=16)
-        ax.tick_params(axis="both", labelsize=14)
+        ax.tick_params(axis="x", rotation=0, labelsize=x_ticks_fontsize)
+        ax.tick_params(axis="y", rotation=0, labelsize=12)
         if row == 2:
             ax.set_xlabel("Polynomial Degree", fontsize=16)
         else:
@@ -948,15 +989,20 @@ def plot_cv_heatmaps_multi_noise(
         )
         ridge_best_mse = ridge_cube.min(axis=2)
 
-        sns.heatmap(
+        im = sns.heatmap(
             ridge_best_mse,
             cmap="plasma",
             xticklabels=degrees,
             yticklabels=sample_sizes,
-            cbar_kws={"label": "MSE"},
+            cbar_kws=cbar_kws,
             annot=False,
             ax=ax,
+            linewidths=0.2,
+            linecolor=(1, 1, 1, 0.2)
         )
+        
+        cbar = im.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=12)
 
         min_idx = np.unravel_index(np.argmin(ridge_best_mse), ridge_best_mse.shape)
         rect = patches.Rectangle(
@@ -971,11 +1017,13 @@ def plot_cv_heatmaps_multi_noise(
 
         ax.set_title(
             f"{model_names[1]} | {noise_labels[noise_level]}",
-            fontsize=16,
+            fontsize=18,
             fontweight="bold",
         )
         ax.set_ylabel("")
-        ax.tick_params(axis="both", labelsize=14)
+        ax.set_yticklabels([])
+        ax.tick_params(axis="x", rotation=0, labelsize=x_ticks_fontsize)
+        ax.tick_params(axis="y", rotation=0, labelsize=12)
         if row == 2:
             ax.set_xlabel("Polynomial Degree", fontsize=16)
         else:
@@ -988,15 +1036,20 @@ def plot_cv_heatmaps_multi_noise(
         )
         lasso_best_mse = lasso_cube.min(axis=2)
 
-        sns.heatmap(
+        im = sns.heatmap(
             lasso_best_mse,
             cmap="plasma",
             xticklabels=degrees,
             yticklabels=sample_sizes,
-            cbar_kws={"label": "MSE"},
+            cbar_kws=cbar_kws,
             annot=False,
             ax=ax,
+            linewidths=0.2,
+            linecolor=(1, 1, 1, 0.2)
         )
+        
+        cbar = im.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=12)
 
         min_idx = np.unravel_index(np.argmin(lasso_best_mse), lasso_best_mse.shape)
         rect = patches.Rectangle(
@@ -1011,11 +1064,13 @@ def plot_cv_heatmaps_multi_noise(
 
         ax.set_title(
             f"{model_names[2]} | {noise_labels[noise_level]}",
-            fontsize=16,
+            fontsize=18,
             fontweight="bold",
         )
         ax.set_ylabel("")
-        ax.tick_params(axis="both", labelsize=14)
+        ax.set_yticklabels([])
+        ax.tick_params(axis="x", rotation=0, labelsize=x_ticks_fontsize)
+        ax.tick_params(axis="y", rotation=0, labelsize=12)
         if row == 2:
             ax.set_xlabel("Polynomial Degree", fontsize=16)
         else:
@@ -1024,15 +1079,20 @@ def plot_cv_heatmaps_multi_noise(
     fig.suptitle(
         f"Cross-Validation MSE Across Noise Levels ({k_folds}-Fold CV)\n"
         "Red box = minimum MSE",
-        fontsize=16,
+        fontsize=25,
         fontweight="bold",
         y=0.995,
     )
 
-    plt.tight_layout(rect=[0, 0, 1, 0.99])
+    plt.subplots_adjust(wspace=0.15, hspace=0.25)
+    plt.tight_layout(rect=[0, 0, 1, 0.99], pad=1.0)
     plt.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"    Saved: {filename}")
+
+
+
+
 
 
 def plot_delta_heatmap_multi_noise(
@@ -1170,6 +1230,199 @@ def plot_delta_heatmap_multi_noise(
     )
 
     plt.tight_layout(rect=[0, 0, 1, 0.99])
+    plt.savefig(filename, dpi=300, bbox_inches="tight")
+    plt.close()
+    print(f"    Saved: {filename}")
+
+
+
+
+
+
+
+
+
+
+def plot_delta_heatmap_zoom(
+    noise_results_dict,
+    sample_sizes,
+    degrees,
+    noise_level,  # "low", "medium", or "high"
+    comparison="ridge",  # "ridge" or "lasso"
+    zoom_sample_sizes=None,  # list of sample sizes to include
+    zoom_degrees=None,  # list of degrees to include
+    filename="figs/delta_heatmap_zoom.pdf",
+):
+    """
+    Create zoomed-in comparison of OLS vs Ridge/Lasso for specific noise level.
+    Shows OLS MSE, Model MSE, and relative improvement (delta).
+    """
+    # Get data for selected noise level
+    data = noise_results_dict[noise_level]
+    cv_results = data["cv_results"]
+    sigma = data["σ"]
+    
+    # Select delta matrix
+    if comparison.lower() == "ridge":
+        delta_matrix = data["delta_ridge"]
+        model_name = "Ridge (Best λ)"
+    elif comparison.lower() == "lasso":
+        delta_matrix = data["delta_lasso"]
+        model_name = "Lasso (Best λ)"
+    else:
+        raise ValueError("comparison must be 'ridge' or 'lasso'")
+    
+    # Get OLS MSE matrix
+    ols_mse = cv_results["ols"]["mse_matrix"]
+    
+    # Get best regularized MSE matrix
+    lambda_values = cv_results["lambda_values"]
+    model_cube = np.stack(
+        [cv_results[comparison][lam]["mse_matrix"] for lam in lambda_values], axis=2
+    )
+    model_best_mse = model_cube.min(axis=2)
+    
+    # Filter to zoom region
+    if zoom_sample_sizes is not None:
+        sample_mask = np.isin(sample_sizes, zoom_sample_sizes)
+        ols_mse = ols_mse[sample_mask, :]
+        model_best_mse = model_best_mse[sample_mask, :]
+        delta_matrix = delta_matrix[sample_mask, :]
+        sample_sizes_plot = np.array(sample_sizes)[sample_mask]
+    else:
+        sample_sizes_plot = sample_sizes
+    
+    if zoom_degrees is not None:
+        degree_mask = np.isin(degrees, zoom_degrees)
+        ols_mse = ols_mse[:, degree_mask]
+        model_best_mse = model_best_mse[:, degree_mask]
+        delta_matrix = delta_matrix[:, degree_mask]
+        degrees_plot = np.array(degrees)[degree_mask]
+    else:
+        degrees_plot = degrees
+    
+    # Convert delta to percent for zoomed region
+    delta_pct = 100.0 * delta_matrix
+    
+    # Compute symmetric vmin/vmax for delta colorbar
+    vmax_abs = np.quantile(np.abs(delta_pct), 0.98) if delta_pct.size > 0 else 5.0
+    vmin, vmax = -vmax_abs, vmax_abs
+    
+    # Create figure with 1 row, 3 columns
+    fig, axes = plt.subplots(1, 3, figsize=(24, 6))
+    
+    # Colorbar configuration (matching your preferences)
+    cbar_kws = {
+        "aspect": 30,
+        "pad": 0.02
+    }
+    x_ticks_fontsize = 10
+    
+    # Left: OLS MSE
+    im0 = sns.heatmap(
+        ols_mse,
+        cmap="plasma",
+        xticklabels=degrees_plot,
+        yticklabels=sample_sizes_plot,
+        cbar_kws=cbar_kws,
+        annot=False,
+        ax=axes[0],
+        linewidths=0.2,
+        linecolor=(1, 1, 1, 0.2)
+    )
+    cbar0 = im0.collections[0].colorbar
+    cbar0.ax.tick_params(labelsize=12)
+    
+    # Mark minimum
+    min_idx = np.unravel_index(np.argmin(ols_mse), ols_mse.shape)
+    rect = plt.Rectangle(
+        (min_idx[1], min_idx[0]), 1, 1, 
+        facecolor="none", edgecolor="red", linewidth=2
+    )
+    axes[0].add_patch(rect)
+    
+    axes[0].set_title(f"OLS | σ={sigma}", fontsize=18, fontweight="bold")
+    axes[0].set_xlabel("Polynomial Degree", fontsize=16)
+    axes[0].set_ylabel("Sample Size (n)", fontsize=16)
+    axes[0].tick_params(axis="x", rotation=0, labelsize=x_ticks_fontsize)
+    axes[0].tick_params(axis="y", rotation=0, labelsize=12)
+    
+    # Middle: Best Ridge/Lasso MSE
+    im1 = sns.heatmap(
+        model_best_mse,
+        cmap="plasma",
+        xticklabels=degrees_plot,
+        yticklabels=sample_sizes_plot,
+        cbar_kws=cbar_kws,
+        annot=False,
+        ax=axes[1],
+        linewidths=0.2,
+        linecolor=(1, 1, 1, 0.2)
+    )
+    cbar1 = im1.collections[0].colorbar
+    cbar1.ax.tick_params(labelsize=12)
+    
+    # Mark minimum
+    min_idx = np.unravel_index(np.argmin(model_best_mse), model_best_mse.shape)
+    rect = plt.Rectangle(
+        (min_idx[1], min_idx[0]), 1, 1,
+        facecolor="none", edgecolor="red", linewidth=2
+    )
+    axes[1].add_patch(rect)
+    
+    axes[1].set_title(f"{model_name} | σ={sigma}", fontsize=18, fontweight="bold")
+    axes[1].set_xlabel("Polynomial Degree", fontsize=16)
+    axes[1].set_ylabel("")
+    axes[1].set_yticklabels([])
+    axes[1].tick_params(axis="x", rotation=0, labelsize=x_ticks_fontsize)
+    axes[1].tick_params(axis="y", rotation=0, labelsize=12)
+    
+    # Right: Delta (relative improvement)
+    im2 = sns.heatmap(
+        delta_pct,
+        cmap="RdYlGn",
+        center=0,
+        vmin=vmin,
+        vmax=vmax,
+        xticklabels=degrees_plot,
+        yticklabels=sample_sizes_plot,
+        cbar_kws={**cbar_kws, "label": "Mean relative Δ (%)"},
+        annot=False,
+        ax=axes[2],
+        linewidths=0.2,
+        linecolor=(0.5, 0.5, 0.5, 0.3)
+    )
+    cbar2 = im2.collections[0].colorbar
+    cbar2.ax.tick_params(labelsize=12)
+    
+    # Mark maximum improvement
+    max_idx = np.unravel_index(np.argmax(delta_pct), delta_pct.shape)
+    rect = plt.Rectangle(
+        (max_idx[1], max_idx[0]), 1, 1,
+        facecolor="none", edgecolor="red", linewidth=2
+    )
+    axes[2].add_patch(rect)
+    
+    axes[2].set_title("Relative Improvement", fontsize=18, fontweight="bold")
+    axes[2].set_xlabel("Polynomial Degree", fontsize=16)
+    axes[2].set_ylabel("")
+    axes[2].set_yticklabels([])
+    axes[2].tick_params(axis="x", rotation=0, labelsize=x_ticks_fontsize)
+    axes[2].tick_params(axis="y", rotation=0, labelsize=12)
+    
+    # Overall title
+    max_improvement = delta_pct.max()
+    
+    fig.suptitle(
+        f"Zoomed Comparison: OLS vs {model_name} (σ={sigma})\n"
+        f"Green = regularization improves over OLS, Red = degrades | Max improvement: {max_improvement:.1f}%",
+        fontsize=16,
+        fontweight="bold",
+        y=1.00
+    )
+    
+    plt.subplots_adjust(wspace=0.15)
+    plt.tight_layout(rect=[0, 0, 1, 0.97], pad=1.0)
     plt.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"    Saved: {filename}")
