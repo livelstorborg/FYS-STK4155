@@ -22,7 +22,6 @@ We analyze Ordinary Least Squares (OLS), Ridge regression, and Lasso regression,
     - plotting.py: plotting functions
     - regression.py: class for regression analysis
     - utils.py: helper functions for RegressionAnalysis class
-  - .python-version: specifies python version (needed for uv)
   - main_gd.py
   - main_lasso.py
   - main_ols.py
@@ -30,9 +29,12 @@ We analyze Ordinary Least Squares (OLS), Ridge regression, and Lasso regression,
   - main_ridge.py
   - main_stochastic.py
   - results.ipynb: Jupyter Notebook to run all main files and generate all figures
-  - Makefile: for cleaning the figs folder
-  - pyproject.toml: for package management (uv)
-  - uv.lock: for package management (uv)
+- Makefile: for cleaning the figs folder
+- pyproject.toml: for package management (uv)
+- uv.lock: for package management (uv)
+- cv_results: folder for storing precomputed data (created and used when running main_resampling.py)
+- .python-version: specifies python version (needed for uv)
+- README.md
 
 
 
