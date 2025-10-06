@@ -1,10 +1,15 @@
 # Project 1: Regression Analysis of Runge's Function
 
+## Authors
+- Live L. Storborg
+- Adam Falchenberg
+- Simon S. Thommesen
+- Henrik Haug
+
 ## Directory structure 
 - 'figs' : contains all figures generated
 - 'src' : 
   - __init__.py: makes src callable as a package
-  - analysis.py: functions for analyzing results
   - plotting.py: plotting functions
   - regression.py: class for regression analysis
   - utils.py: helper functions for RegressionAnalysis class
@@ -20,10 +25,10 @@
 
 
 ## Run the Code 
-### Using uv (recommended)
-If you don't have uv, install it using pip:
+### Using uv as package manager (recommended)
+If you don't have uv, install it using homebrew:
 ```bash
-pip install uv
+brew install uv
 ```
 
 Sync the dependencies:
