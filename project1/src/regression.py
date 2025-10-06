@@ -1,14 +1,14 @@
-from typing import Dict, Any, Tuple, Optional, Union
+from typing import Dict, Any, Tuple, Union
 import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
 
 from .utils import (
     analytical_solution,
-    gradient_descent,  
+    gradient_descent,
     gd_momentum,
     gd_adagrad,
     gd_rmsprop,
-    gd_adam
+    gd_adam,
 )
 
 
@@ -23,64 +23,67 @@ class RegressionAnalysis:
     """
 
     def __init__(
-        self, 
-        data, 
-        degree, 
-        lam=0.0, 
-        eta=0.01, 
-        num_iters=1000, 
+        self,
+        data,
+        degree,
+        lam=0.0,
+        eta=0.01,
+        num_iters=1000,
         full_dataset=False,
-        # Add stochastic parameters
         batch_size=32,
         n_epochs=50,
         random_state=None,
-        tol_relative=1e-6
+        tol_relative=1e-6,
     ):
         if full_dataset:
-            # data = [X_full, y_full, y_mean] (already centered)
             self.X_full, self.y_full, self.y_mean = data
             self.X_train = self.X_test = self.X_full
             self.y_train = self.y_test = self.y_full
             self.y_offset = self.y_mean
         else:
-            # data = [X_train, X_test, y_train, y_test, x_train, x_test, y_mean]
             self.X_train, self.X_test, self.y_train, self.y_test, *_rest = data
             self.y_offset = _rest[-1]  # y_mean
 
+        # non-stochastic parameters
         self.degree = degree
         self.lam = lam
         self.eta = eta
         self.num_iters = num_iters
-        # Add stochastic parameters
+
+        # stochastic parameters
         self.batch_size = batch_size
         self.n_epochs = n_epochs
         self.random_state = random_state
         self.tol_relative = tol_relative
-
-        # Where everything lands: runs[(model, opt)] -> dict of artifacts
         self.runs: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
         # Available models/opts - add stochastic optimizers
         self._models = ("ols", "ridge", "lasso")
         self._opt_fns = {
-            # Full-batch optimizers
+            # optimizers
             "gd": gradient_descent,
             "momentum": gd_momentum,
             "adagrad": gd_adagrad,
             "rmsprop": gd_rmsprop,
             "adam": gd_adam,
-            # Stochastic optimizers (use same functions with stochastic=True)
+            # Stochastic optimizers
             "sgd": gradient_descent,
             "sgd_momentum": gd_momentum,
             "sgd_adagrad": gd_adagrad,
             "sgd_rmsprop": gd_rmsprop,
             "sgd_adam": gd_adam,
         }
-        
-        # Track which optimizers are stochastic
-        self._stochastic_opts = {"sgd", "sgd_momentum", "sgd_adagrad", "sgd_rmsprop", "sgd_adam"}
 
-    # ----------------- internals -----------------
+        # Track which optimizers are stochastic
+        self._stochastic_opts = {
+            "sgd",
+            "sgd_momentum",
+            "sgd_adagrad",
+            "sgd_rmsprop",
+            "sgd_adam",
+        }
+
+    # ----------------- internal functions -----------------
 
     def _predict(self, X: np.ndarray, theta: np.ndarray) -> np.ndarray:
         return X @ theta
@@ -112,7 +115,7 @@ class RegressionAnalysis:
             return model in ("ols", "ridge")  # no analytical lasso
         return opt in self._opt_fns or opt in self._stochastic_opts
 
-    # ----------------- public API -----------------
+    # ----------------- User -----------------
 
     def fit(
         self,
@@ -122,38 +125,35 @@ class RegressionAnalysis:
     ) -> None:
         """
         Fit model(s) with optimizer(s). Handles both single and multiple combinations.
-        
+
         Parameters
         ----------
         models : str or tuple of str, optional
             Single model or tuple of models in {'ols','ridge','lasso'}
             If None, uses all available models
-        opts : str or tuple of str, optional  
-            Single optimizer or tuple of optimizers in 
+        opts : str or tuple of str, optional
+            Single optimizer or tuple of optimizers in
             {'analytical','gd','momentum','adagrad','rmsprop','adam',
             'sgd','sgd_momentum','sgd_adagrad','sgd_rmsprop','sgd_adam'}
             If None, uses default optimizers
         **opt_kwargs
             Optimizer-specific parameters (e.g., beta=0.9, eps=1e-8, batch_size=64)
         """
-        # Handle defaults
         if models is None:
             models = self._models
         if opts is None:
             opts = ("analytical", "gd", "momentum", "adagrad", "rmsprop", "adam")
-        
-        # Convert single strings to tuples for uniform processing
         if isinstance(models, str):
             models = (models,)
         if isinstance(opts, str):
             opts = (opts,)
-        
+
         # Fit all combinations
         for model in models:
             for opt in opts:
                 if not self._valid_combo(model, opt):
                     continue
-                    
+
                 # Solve for theta
                 if opt == "analytical":
                     theta = analytical_solution(
@@ -164,27 +164,30 @@ class RegressionAnalysis:
                     )
                     history = None
                 elif opt in self._stochastic_opts:
-                    # Stochastic optimizer - use n_epochs instead of num_iters
                     if self.eta is None or self.n_epochs is None:
-                        raise ValueError("eta and n_epochs required for stochastic methods")
-                    
+                        raise ValueError(
+                            "eta and n_epochs required for stochastic methods"
+                        )
+
                     lam_arg = self.lam if model in ("ridge", "lasso") else None
                     theta, history = self._opt_fns[opt](
                         self.X_train,
                         self.y_train,
                         eta=self.eta,
-                        num_iters=self.n_epochs,  # Pass n_epochs as num_iters
+                        num_iters=self.n_epochs,
                         method=model,
                         lam=lam_arg,
                         tol_relative=self.tol_relative,
-                        stochastic=True,  # Enable stochastic mode
+                        stochastic=True,
                         batch_size=opt_kwargs.get("batch_size", self.batch_size),
-                        **{k: v for k, v in opt_kwargs.items() if k != "batch_size"}
+                        **{k: v for k, v in opt_kwargs.items() if k != "batch_size"},
                     )
                 else:
-                    # Full-batch optimizer - original parameter structure  
+                    # Full-batch optimizer
                     if self.eta is None or self.num_iters is None:
-                        raise ValueError("eta and num_iters required for gradient-based methods")
+                        raise ValueError(
+                            "eta and num_iters required for gradient-based methods"
+                        )
                     lam_arg = self.lam if model in ("ridge", "lasso") else 0.0
                     theta, history = self._opt_fns[opt](
                         self.X_train,
@@ -216,7 +219,7 @@ class RegressionAnalysis:
     def get_metric(self, model: str, opt: str, name: str) -> float:
         """
         Get a specific metric for a model/optimizer combination.
-        
+
         Parameters
         ----------
         model : str
@@ -225,7 +228,7 @@ class RegressionAnalysis:
             Optimizer name
         name : str
             Metric name in {'train_mse','train_r2','test_mse','test_r2'}
-        
+
         Returns
         -------
         float
@@ -239,14 +242,14 @@ class RegressionAnalysis:
     def get_theta(self, model: str, opt: str) -> np.ndarray:
         """
         Get the fitted parameters for a model/optimizer combination.
-        
+
         Parameters
         ----------
         model : str
             Model name in {'ols', 'ridge', 'lasso'}
         opt : str
             Optimizer name
-            
+
         Returns
         -------
         np.ndarray
@@ -260,7 +263,7 @@ class RegressionAnalysis:
     def fitted(self):
         """
         Get list of fitted (model, optimizer) combinations.
-        
+
         Returns
         -------
         list
@@ -271,7 +274,7 @@ class RegressionAnalysis:
     def summary(self) -> Dict[str, Dict[str, Any]]:
         """
         Get summary of all fitted models with key metrics.
-        
+
         Returns
         -------
         dict
