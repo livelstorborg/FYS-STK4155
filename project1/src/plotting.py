@@ -21,6 +21,9 @@ def setup_plot_formatting():
     plt.tight_layout()
 
 
+
+
+# ========== OLS ==========
 def mse_degree_ols(results):
     """
     Plot MSE vs polynomial degree for training and test data.
@@ -69,7 +72,7 @@ def mse_degree_ols(results):
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"MSE", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/mse_vs_degree_ols.pdf", bbox_inches="tight")
+    plt.savefig("figs/mse_degree_ols.pdf", dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -120,41 +123,13 @@ def r2_degree_ols(results):
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"R²", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/r2_vs_degree_ols.pdf", bbox_inches="tight")
+    plt.savefig("figs/r2_degree_ols.pdf", dpi=300, bbox_inches="tight")
     plt.show()
 
 
-def plot_theta(theta: list, method: str):
-    """
-    Plot the model parameters (theta) for a given method.
-
-    Parameters
-    ----------
-    theta : list or np.ndarray
-        Model parameters to plot
-    method : str
-        Method name for labeling the plot
-    """
-
-    plt.figure(figsize=(8, 6))
-    setup_plot_formatting()
-    for i, theta in enumerate(theta):
-        for param in theta:
-            plt.scatter(
-                i + 1,
-                param,
-                label=f"θ_{i}" if i == 0 else "",
-                s=100,
-                color="mediumorchid",
-                alpha=0.5,
-                edgecolors="black",
-            )
-    plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(rf"$\theta_{{{method}}}$", fontsize=16)
-    plt.savefig(f"figs/theta_{method.lower()}.pdf", bbox_inches="tight")
-    plt.show()
 
 
+# ========== RIDGE ==========
 def mse_degree_ridge(results):
     """
     Plot MSE vs polynomial degree for a specific lambda.
@@ -204,7 +179,7 @@ def mse_degree_ridge(results):
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel("MSE", fontsize=16)
     setup_plot_formatting()
-    plt.savefig(f"figs/mse_vs_degree_ridge.pdf", bbox_inches="tight")
+    plt.savefig("figs/mse_degree_ridge.pdf", dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -248,10 +223,70 @@ def r2_degree_ridge(results):
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel("R²", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/r2_vs_degree_ridge.pdf", bbox_inches="tight")
+    plt.savefig("figs/r2_degree_ridge.pdf", dpi=300, bbox_inches="tight")
     plt.show()
 
 
+
+
+# ========== Theta for both methods ==========
+def plot_theta(theta: list, method: str):
+    """
+    Plot the model parameters (theta) for a given method.
+
+    Parameters
+    ----------
+    theta : list or np.ndarray
+        Model parameters to plot
+    method : str
+        Method name for labeling the plot
+    """
+
+    plt.figure(figsize=(8, 6))
+    setup_plot_formatting()
+    for i, theta in enumerate(theta):
+        for param in theta:
+            plt.scatter(
+                i + 1,
+                param,
+                label=f"θ_{i}" if i == 0 else "",
+                s=100,
+                color="mediumorchid",
+                alpha=0.5,
+                edgecolors="black",
+            )
+    plt.xlabel("Polynomial Degree", fontsize=16)
+    plt.ylabel(rf"$\theta_{{{method}}}$", fontsize=16)
+    plt.savefig(f"figs/theta_{method}.pdf", dpi=300, bbox_inches="tight")
+    plt.show()
+
+
+
+# ========== Printing DataFrames 
+def print_dataframe(df: pd.DataFrame, header: str, divider: str):
+    """
+    Function that prints a pd.DataFrame with good formatting.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Dataframe that is printed
+    header: string
+        Header
+    divider: str
+        symbol used for dividing tables and header
+
+    """
+
+    print("\n" + divider * 80)
+    print(header)
+    print("=" * 80)
+    print(df.to_string(index=False))
+    print("\n" + divider * 80)
+
+# =====================================================================================================
+#                         Functions to make comparisons, used for analysis throughout
+# =====================================================================================================
 def compare(
     x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False
 ):
@@ -468,23 +503,4 @@ def compare_sgd(
     plt.show()
 
 
-def print_dataframe(df: pd.DataFrame, header: str, divider: str):
-    """
-    Function that prints a pd.DataFrame with good formatting.
 
-    Parameters
-    ----------
-    df: pd.DataFrame
-        Dataframe that is printed
-    header: string
-        Header
-    divider: str
-        symbol used for dividing tables and header
-
-    """
-
-    print("\n" + divider * 80)
-    print(header)
-    print("=" * 80)
-    print(df.to_string(index=False))
-    print("\n" + divider * 80)
