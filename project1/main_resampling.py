@@ -12,6 +12,7 @@ from src.plotting import (
     plot_cv_vs_bootstrap_comparison,
     plot_cv_heatmaps_multi_noise,
     plot_delta_heatmap_multi_noise,
+    plot_delta_heatmap_zoom
 )
 import pandas as pd
 import time
@@ -583,7 +584,7 @@ if __name__ == "__main__":
     noise_std = 0.1
     test_size = 0.25
     parallel = True
-    max_workers = 9
+    max_workers = 10
 
     # ===========================
     # PART G: BOOTSTRAP ANALYSIS
@@ -623,6 +624,7 @@ if __name__ == "__main__":
     plot_diagonal_comparison(
         bootstrap_results, diagonal_points, n_bootstraps=n_bootstraps
     )
+    
 
     # ===================================
     # PART H: CROSS-VALIDATION ANALYSIS
@@ -661,10 +663,6 @@ if __name__ == "__main__":
     # Create results directory
     os.makedirs("cv_results", exist_ok=True)
 
-    test_size = 0.25
-    parallel = True
-    max_workers = 9
-    maxdegree = 20
     k_folds = 5
     seeds = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 
@@ -916,3 +914,19 @@ if __name__ == "__main__":
     )
     print(f"\nPlots saved to figs/ directory")
     print("=" * 70)
+
+    
+    
+    
+    # Example zoom plot: Low noise, OLS vs LASSO
+    # print("Low noise, N = all, degree = [7, 8, 9, 10, 11, 12, 13]")
+    # plot_delta_heatmap_zoom(
+    #     noise_results_for_plot,
+    #     sample_sizes_arr,
+    #     degrees_arr,
+    #     noise_level="low",
+    #     comparison="lasso",
+    #     zoom_sample_sizes=None, 
+    #     zoom_degrees=[7, 8, 9, 10, 11, 12, 13], 
+    #     filename="figs/zoom_low_lasso.pdf"
+    # )
