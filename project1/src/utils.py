@@ -87,8 +87,6 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol_relative=
                      stochastic=False, batch_size=32, use_schedule=False, t0=5, t1=50):
     """
     Unified gradient descent function for OLS, Ridge, and Lasso regression.
-    
-    NEW: Added learning rate scheduling for stochastic mode
     """
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
@@ -102,7 +100,7 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol_relative=
     if stochastic:
         m = int(n_samples / batch_size)
         n_epochs = num_iters
-        t_global = 0  # Global step counter for learning rate schedule
+        t_global = 0
         
         for epoch in range(n_epochs):
             indices = np.random.permutation(n_samples)
@@ -117,7 +115,6 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol_relative=
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
                 
-                # Apply learning rate schedule if requested
                 current_eta = learning_rate_schedule(t_global, eta, t0, t1) if use_schedule else eta
                 
                 if method.lower() == "ols":
@@ -133,12 +130,40 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol_relative=
                 
                 theta = theta_new
             
+            # Evaluate on full dataset after each epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y, y_pred_full)
             mse_history.append(epoch_mse)
             
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
+            # Multi-criteria divergence detection
+            # 1. Immediate catastrophic failure
+            if np.isnan(epoch_mse) or np.isinf(epoch_mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf) at epoch {epoch}')
                 break
+            
+            # 2. Catastrophic explosion (10× initial MSE)
+            if epoch_mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded) at epoch {epoch}')
+                break
+            
+            # 3. Sustained upward trend after warmup period
+            if epoch >= 10 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                # Check if all last 5 epochs are increasing
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                # And current MSE is significantly worse than start
+                if all_increasing and epoch_mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase) at epoch {epoch}')
+                    break
+            
+            # Test for convergence (after at least 1 epoch)
+            if epoch > 0:
+                abs_change = np.abs(mse_history[epoch] - mse_history[epoch-1])
+                rel_change = abs_change / mse_history[epoch-1] if mse_history[epoch-1] > 1e-10 else abs_change
+                
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    print(f'({method}) eta = {eta}, converged at epoch {epoch}')
+                    break
                 
     else:
         for t in range(num_iters):
@@ -159,31 +184,40 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol_relative=
 
             theta = theta_new
 
-            # Test for divergence
-            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
-                print(f'({method}) eta = {eta}, diverged')
+            # Multi-criteria divergence detection
+            # 1. Immediate catastrophic failure
+            if np.isnan(mse) or np.isinf(mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf)')
                 break
-            # Only check convergence after at least 2 iterations
+            
+            # 2. Catastrophic explosion (10× initial MSE)
+            if mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded)')
+                break
+            
+            # 3. Sustained upward trend after warmup
+            if t >= 50 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                if all_increasing and mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase)')
+                    break
+            
+            # Test for convergence
             if t > 0:
                 abs_change = np.abs(mse_history[t] - mse_history[t-1])
                 rel_change = abs_change / mse_history[t-1] if mse_history[t-1] > 1e-10 else abs_change
         
                 if rel_change < tol_relative or abs_change < 1e-10:
-                    converged_at = t
                     print(f'({method}) eta = {eta}, converged at iteration {t}')
                     break
 
     return theta, mse_history
 
-
-
-
 def gd_momentum(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.9, 
                 tol_relative=1e-6, stochastic=False, batch_size=32, use_schedule=False, t0=5, t1=50):
     """
     Unified Gradient Descent with momentum for OLS, Ridge, and Lasso.
-    
-    NEW: Added learning rate scheduling for stochastic mode
     """
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
@@ -213,7 +247,6 @@ def gd_momentum(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
                 
-                # Apply learning rate schedule if requested
                 current_eta = learning_rate_schedule(t_global, eta, t0, t1) if use_schedule else eta
                 
                 if method.lower() == "ols":
@@ -230,12 +263,39 @@ def gd_momentum(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0
                     theta_temp = theta - current_eta * v
                     theta = soft_threshold(theta_temp, current_eta * lam)
             
+            # Evaluate on full dataset after each epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
             
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
+            # Multi-criteria divergence detection
+            # 1. Immediate catastrophic failure
+            if np.isnan(epoch_mse) or np.isinf(epoch_mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf) at epoch {epoch}')
                 break
+            
+            # 2. Catastrophic explosion (10× initial MSE)
+            if epoch_mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded) at epoch {epoch}')
+                break
+            
+            # 3. Sustained upward trend after warmup period
+            if epoch >= 10 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                if all_increasing and epoch_mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase) at epoch {epoch}')
+                    break
+            
+            # Test for convergence (after at least 1 epoch)
+            if epoch > 0:
+                abs_change = np.abs(mse_history[epoch] - mse_history[epoch-1])
+                rel_change = abs_change / mse_history[epoch-1] if mse_history[epoch-1] > 1e-10 else abs_change
+                
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    print(f'({method}) eta = {eta}, converged at epoch {epoch}')
+                    break
+                    
     else:
         for t in range(num_iters):
             y_pred = X @ theta
@@ -256,22 +316,31 @@ def gd_momentum(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0
                 theta_temp = theta - eta * v
                 theta = soft_threshold(theta_temp, eta * lam)
 
-            if method.lower() == "lasso":
-                grad_for_check = OLS_gradient(X, y, theta)
-            else:
-                grad_for_check = grad
-
-            # Test for divergence
-            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
-                print(f'({method}) eta = {eta}, diverged')
+            # Multi-criteria divergence detection
+            # 1. Immediate catastrophic failure
+            if np.isnan(mse) or np.isinf(mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf)')
                 break
-            # Only check convergence after at least 2 iterations
+            
+            # 2. Catastrophic explosion (10× initial MSE)
+            if mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded)')
+                break
+            
+            # 3. Sustained upward trend after warmup
+            if t >= 50 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                if all_increasing and mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase)')
+                    break
+            
+            # Test for convergence
             if t > 0:
                 abs_change = np.abs(mse_history[t] - mse_history[t-1])
                 rel_change = abs_change / mse_history[t-1] if mse_history[t-1] > 1e-10 else abs_change
         
                 if rel_change < tol_relative or abs_change < 1e-10:
-                    converged_at = t
                     print(f'({method}) eta = {eta}, converged at iteration {t}')
                     break
 
@@ -282,8 +351,6 @@ def gd_adagrad(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, eps=1e-
                tol_relative=1e-6, stochastic=False, batch_size=32):
     """
     Unified AdaGrad for OLS, Ridge, and Lasso.
-    
-    NOTE: AdaGrad has BUILT-IN adaptive learning rates - no schedule needed
     """
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
@@ -318,7 +385,6 @@ def gd_adagrad(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, eps=1e-
                 elif method.lower() == "lasso":
                     grad = OLS_gradient(X_batch, y_batch, theta)
 
-                # AdaGrad: adaptive learning rate per parameter
                 G += grad**2
                 adapted_grad = grad / (np.sqrt(G) + eps)
 
@@ -328,12 +394,36 @@ def gd_adagrad(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, eps=1e-
                 else:
                     theta = theta - eta * adapted_grad
             
+            # Evaluate on full dataset after each epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
             
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
+            # Multi-criteria divergence detection
+            if np.isnan(epoch_mse) or np.isinf(epoch_mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf) at epoch {epoch}')
                 break
+            
+            if epoch_mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded) at epoch {epoch}')
+                break
+            
+            if epoch >= 10 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                if all_increasing and epoch_mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase) at epoch {epoch}')
+                    break
+            
+            # Test for convergence
+            if epoch > 0:
+                abs_change = np.abs(mse_history[epoch] - mse_history[epoch-1])
+                rel_change = abs_change / mse_history[epoch-1] if mse_history[epoch-1] > 1e-10 else abs_change
+                
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    print(f'({method}) eta = {eta}, converged at epoch {epoch}')
+                    break
+                    
     else:
         for t in range(num_iters):
             y_pred = X @ theta
@@ -356,17 +446,28 @@ def gd_adagrad(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, eps=1e-
             else:
                 theta = theta - eta * adapted_grad
 
-            # Test for divergence
-            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
-                print(f'({method}) eta = {eta}, diverged')
+            # Multi-criteria divergence detection
+            if np.isnan(mse) or np.isinf(mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf)')
                 break
-            # Only check convergence after at least 2 iterations
+            
+            if mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded)')
+                break
+            
+            if t >= 50 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                if all_increasing and mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase)')
+                    break
+            
+            # Test for convergence
             if t > 0:
                 abs_change = np.abs(mse_history[t] - mse_history[t-1])
                 rel_change = abs_change / mse_history[t-1] if mse_history[t-1] > 1e-10 else abs_change
         
                 if rel_change < tol_relative or abs_change < 1e-10:
-                    converged_at = t
                     print(f'({method}) eta = {eta}, converged at iteration {t}')
                     break
 
@@ -377,8 +478,6 @@ def gd_rmsprop(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.
                eps=1e-8, tol_relative=1e-6, stochastic=False, batch_size=32):
     """
     Unified RMSProp for OLS, Ridge, and Lasso.
-    
-    NOTE: RMSProp has BUILT-IN adaptive learning rates - no schedule needed
     """
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
@@ -413,7 +512,6 @@ def gd_rmsprop(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.
                 elif method.lower() == "lasso":
                     grad = OLS_gradient(X_batch, y_batch, theta)
 
-                # RMSProp: adaptive learning rate per parameter
                 S = beta * S + (1.0 - beta) * (grad**2)
                 adapted_grad = grad / (np.sqrt(S) + eps)
 
@@ -423,12 +521,36 @@ def gd_rmsprop(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.
                 else:
                     theta = theta - eta * adapted_grad
             
+            # Evaluate on full dataset after each epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
             
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
+            # Multi-criteria divergence detection
+            if np.isnan(epoch_mse) or np.isinf(epoch_mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf) at epoch {epoch}')
                 break
+            
+            if epoch_mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded) at epoch {epoch}')
+                break
+            
+            if epoch >= 10 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                if all_increasing and epoch_mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase) at epoch {epoch}')
+                    break
+            
+            # Test for convergence
+            if epoch > 0:
+                abs_change = np.abs(mse_history[epoch] - mse_history[epoch-1])
+                rel_change = abs_change / mse_history[epoch-1] if mse_history[epoch-1] > 1e-10 else abs_change
+                
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    print(f'({method}) eta = {eta}, converged at epoch {epoch}')
+                    break
+                    
     else:
         for t in range(num_iters):
             y_pred = X @ theta
@@ -451,17 +573,28 @@ def gd_rmsprop(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.
             else:
                 theta = theta - eta * adapted_grad
 
-            # Test for divergence
-            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
-                print(f'({method}) eta = {eta}, diverged')
+            # Multi-criteria divergence detection
+            if np.isnan(mse) or np.isinf(mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf)')
                 break
-            # Only check convergence after at least 2 iterations
+            
+            if mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded)')
+                break
+            
+            if t >= 50 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                if all_increasing and mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase)')
+                    break
+            
+            # Test for convergence
             if t > 0:
                 abs_change = np.abs(mse_history[t] - mse_history[t-1])
                 rel_change = abs_change / mse_history[t-1] if mse_history[t-1] > 1e-10 else abs_change
         
                 if rel_change < tol_relative or abs_change < 1e-10:
-                    converged_at = t
                     print(f'({method}) eta = {eta}, converged at iteration {t}')
                     break
 
@@ -472,8 +605,6 @@ def gd_adam(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta1=0.9,
             beta2=0.999, eps=1e-8, tol_relative=1e-6, amsgrad=False, stochastic=False, batch_size=32):
     """
     Unified Adam optimizer for OLS, Ridge, and Lasso.
-    
-    NOTE: Adam has BUILT-IN adaptive learning rates - no schedule needed
     """
     if method.lower() not in ["ols", "ridge", "lasso"]:
         raise ValueError("method must be 'ols', 'ridge', or 'lasso'")
@@ -512,11 +643,9 @@ def gd_adam(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta1=0.9,
                 elif method.lower() == "lasso":
                     grad = OLS_gradient(X_batch, y_batch, theta)
 
-                # Adam: combines momentum + adaptive learning rate
                 m_moment = beta1 * m_moment + (1.0 - beta1) * grad
                 v_moment = beta2 * v_moment + (1.0 - beta2) * (grad**2)
 
-                # Bias correction
                 m_hat = m_moment / (1.0 - beta1**t)
                 v_hat = v_moment / (1.0 - beta2**t)
 
@@ -534,12 +663,36 @@ def gd_adam(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta1=0.9,
                 else:
                     theta = theta - eta * adapted_grad
             
+            # Evaluate on full dataset after each epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
             
-            if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol_relative:
+            # Multi-criteria divergence detection
+            if np.isnan(epoch_mse) or np.isinf(epoch_mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf) at epoch {epoch}')
                 break
+            
+            if epoch_mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded) at epoch {epoch}')
+                break
+            
+            if epoch >= 10 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                if all_increasing and epoch_mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase) at epoch {epoch}')
+                    break
+            
+            # Test for convergence
+            if epoch > 0:
+                abs_change = np.abs(mse_history[epoch] - mse_history[epoch-1])
+                rel_change = abs_change / mse_history[epoch-1] if mse_history[epoch-1] > 1e-10 else abs_change
+                
+                if rel_change < tol_relative or abs_change < 1e-10:
+                    print(f'({method}) eta = {eta}, converged at epoch {epoch}')
+                    break
+                    
     else:
         for t in range(1, num_iters + 1):
             y_pred = X @ theta
@@ -573,19 +726,30 @@ def gd_adam(X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta1=0.9,
             else:
                 theta = theta - eta * adapted_grad
 
-            # Test for divergence
-            if np.isnan(mse) or np.isinf(mse) or (t > 50 and mse > mse_history[0]):
-                print(f'({method}) eta = {eta}, diverged')
+            # Multi-criteria divergence detection
+            if np.isnan(mse) or np.isinf(mse):
+                print(f'({method}) eta = {eta}, diverged (NaN/Inf)')
                 break
-            # Only check convergence after at least 2 iterations and enough history
-            if t > 1 and len(mse_history) >= 2:  # Adam starts from t=1, so check after t > 1
-                current_mse_idx = len(mse_history) - 1  # Current iteration's MSE
-                prev_mse_idx = len(mse_history) - 2     # Previous iteration's MSE
+            
+            if mse > 10 * mse_history[0]:
+                print(f'({method}) eta = {eta}, diverged (exploded)')
+                break
+            
+            if t >= 50 and len(mse_history) >= 5:
+                last_5 = mse_history[-5:]
+                all_increasing = all(last_5[i] > last_5[i-1] for i in range(1, 5))
+                if all_increasing and mse > 1.5 * mse_history[0]:
+                    print(f'({method}) eta = {eta}, diverged (sustained increase)')
+                    break
+            
+            # Test for convergence
+            if t > 1 and len(mse_history) >= 2:
+                current_mse_idx = len(mse_history) - 1
+                prev_mse_idx = len(mse_history) - 2
                 abs_change = np.abs(mse_history[current_mse_idx] - mse_history[prev_mse_idx])
                 rel_change = abs_change / mse_history[prev_mse_idx] if mse_history[prev_mse_idx] > 1e-10 else abs_change
         
                 if rel_change < tol_relative or abs_change < 1e-10:
-                    converged_at = t
                     print(f'({method}) eta = {eta}, converged at iteration {t}')
                     break
 
