@@ -89,11 +89,11 @@ def check_convergence_stochastic(
 ):
     status = False
     if np.isnan(epoch_mse) or np.isinf(epoch_mse):
-        print(f"({method}) eta = {eta}, diverged (NaN/Inf) at epoch {epoch}")
+        print(f"Method = {method}, eta = {eta}, diverged (NaN/Inf) at epoch {epoch}")
         status = True
     # 2. Catastrophic explosion (10× initial MSE)
     if epoch_mse > 10 * mse_history[0]:
-        print(f"({method}) eta = {eta}, diverged (exploded) at epoch {epoch}")
+        print(f"({method})eta = {eta}, diverged (exploded) at epoch {epoch}")
         status = True
 
     # 3. Sustained upward trend after warmup period
@@ -104,7 +104,7 @@ def check_convergence_stochastic(
         # And current MSE is significantly worse than start
         if all_increasing and epoch_mse > 1.5 * mse_history[0]:
             print(
-                f"({method}) eta = {eta}, diverged (sustained increase) at epoch {epoch}"
+                f"Method = {method}, eta = {eta}, diverged (sustained increase) at epoch {epoch}"
             )
             status = True
 
@@ -118,7 +118,7 @@ def check_convergence_stochastic(
         )
 
         if rel_change < tol_relative or abs_change < 1e-10:
-            print(f"({method}) eta = {eta}, converged at epoch {epoch}")
+            print(f"Method = {method}, eta = {eta}, converged at epoch {epoch}")
             status = True
 
     return status
@@ -131,12 +131,12 @@ def check_convergence_non_stochastic(
     # Multi-criteria divergence detection
     # 1. Immediate catastrophic failure
     if np.isnan(mse) or np.isinf(mse):
-        print(f"({method}) eta = {eta}, diverged (NaN/Inf)")
+        print(f"(Method = {method}, eta = {eta}, diverged (NaN/Inf)")
         status = True
 
     # 2. Catastrophic explosion (10× initial MSE)
     if mse > 10 * mse_history[0]:
-        print(f"({method}) eta = {eta}, diverged (exploded)")
+        print(f"Method = {method}, eta = {eta}, diverged (exploded)")
         status = True
 
     # 3. Sustained upward trend after warmup
@@ -144,7 +144,7 @@ def check_convergence_non_stochastic(
         last_5 = mse_history[-5:]
         all_increasing = all(last_5[i] > last_5[i - 1] for i in range(1, 5))
         if all_increasing and mse > 1.5 * mse_history[0]:
-            print(f"({method}) eta = {eta}, diverged (sustained increase)")
+            print(f"Method = {method}, eta = {eta}, diverged (sustained increase)")
             status = True
 
     # Test for convergence
@@ -162,7 +162,7 @@ def check_convergence_non_stochastic(
             )
 
             if rel_change < tol_relative or abs_change < 1e-10:
-                print(f"({method}) eta = {eta}, converged at iteration {t}")
+                print(f"Method = {method}, eta = {eta}, converged at iteration {t}")
                 status = True
     else:
         if t > 0:
@@ -174,7 +174,7 @@ def check_convergence_non_stochastic(
             )
 
             if rel_change < tol_relative or abs_change < 1e-10:
-                print(f"({method}) eta = {eta}, converged at iteration {t}")
+                print(f"Method = {method}, eta = {eta}, converged at iteration {t}")
                 status = True
     return status
 
