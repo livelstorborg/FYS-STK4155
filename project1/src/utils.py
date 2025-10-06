@@ -8,6 +8,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 
+
 def runge(x):
     """Runge function: f(x) = 1 / (1 + 25x^2)"""
     return 1.0 / (1 + 25 * x**2)
@@ -47,10 +48,10 @@ def scale_data(X, y, X_mean=None, X_std=None, y_mean=None):
         X_std = np.std(X, axis=0)
         X_std = np.where(X_std < 1e-8, 1.0, X_std)
         y_mean = np.mean(y)
-    
+
     X_norm = (X - X_mean) / X_std
     y_centered = y - y_mean
-    
+
     return X_norm, y_centered, X_mean, X_std, y_mean
 
 
@@ -129,7 +130,17 @@ def soft_threshold(x, threshold):
     return np.sign(x) * np.maximum(np.abs(x) - threshold, 0.0)
 
 
-def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol=1e-8, stochastic=False, batch_size=32):
+def gradient_descent(
+    X,
+    y,
+    eta,
+    num_iters,
+    method="ols",
+    lam=None,
+    tol=1e-8,
+    stochastic=False,
+    batch_size=32,
+):
     """
     Unified gradient descent function for OLS, Ridge, and Lasso regression.
 
@@ -175,23 +186,23 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol=1e-8, sto
         # Stochastic Gradient Descent with minibatches
         m = int(n_samples / batch_size)  # number of minibatches
         n_epochs = num_iters  # treat num_iters as epochs for SGD
-        
+
         for epoch in range(n_epochs):
             # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
-            
+
             epoch_mse = 0
             for i in range(m):
                 # Pick random minibatch
                 k = np.random.randint(m)
                 start_idx = k * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
-                
+
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
-                
+
                 # Compute gradient on minibatch
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
@@ -203,18 +214,18 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol=1e-8, sto
                     grad_smooth = OLS_gradient(X_batch, y_batch, theta)
                     theta_temp = theta - eta * grad_smooth
                     theta_new = soft_threshold(theta_temp, eta * lam)
-                
+
                 theta = theta_new
-            
+
             # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y, y_pred_full)
             mse_history.append(epoch_mse)
-            
+
             # Check convergence (optional for SGD)
             if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
                 break
-                
+
     else:
         # Standard Batch Gradient Descent (your original implementation)
         for t in range(num_iters):
@@ -241,9 +252,18 @@ def gradient_descent(X, y, eta, num_iters, method="ols", lam=None, tol=1e-8, sto
 
     return theta, mse_history
 
+
 def gd_momentum(
-    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.9, tol=1e-10, 
-    stochastic=False, batch_size=32
+    X,
+    y,
+    eta=1e-2,
+    num_iters=10_000,
+    method="ols",
+    lam=None,
+    beta=0.9,
+    tol=1e-10,
+    stochastic=False,
+    batch_size=32,
 ):
     """
     Unified Gradient Descent with momentum for OLS, Ridge, and Lasso.
@@ -294,22 +314,22 @@ def gd_momentum(
         # Stochastic Gradient Descent with momentum
         m = int(n_samples / batch_size)  # number of minibatches
         n_epochs = num_iters  # treat num_iters as epochs for SGD
-        
+
         for epoch in range(n_epochs):
             # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
-            
+
             for i in range(m):
                 # Pick random minibatch
                 k = np.random.randint(m)
                 start_idx = k * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
-                
+
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
-                
+
                 # gradient + momentum step based on method
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
@@ -327,12 +347,12 @@ def gd_momentum(
                     v = beta * v + grad_smooth
                     theta_temp = theta - eta * v
                     theta = soft_threshold(theta_temp, eta * lam)
-            
+
             # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
-            
+
             # Check convergence (optional for SGD)
             if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
                 break
@@ -376,8 +396,16 @@ def gd_momentum(
 
 
 def gd_adagrad(
-    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, eps=1e-8, tol=1e-10,
-    stochastic=False, batch_size=32
+    X,
+    y,
+    eta=1e-2,
+    num_iters=10_000,
+    method="ols",
+    lam=None,
+    eps=1e-8,
+    tol=1e-10,
+    stochastic=False,
+    batch_size=32,
 ):
     """
     Unified AdaGrad for OLS, Ridge, and Lasso.
@@ -398,22 +426,22 @@ def gd_adagrad(
         # Stochastic AdaGrad
         m = int(n_samples / batch_size)  # number of minibatches
         n_epochs = num_iters  # treat num_iters as epochs for SGD
-        
+
         for epoch in range(n_epochs):
             # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
-            
+
             for i in range(m):
                 # Pick random minibatch
                 k = np.random.randint(m)
                 start_idx = k * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
-                
+
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
-                
+
                 # gradient based on method
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
@@ -433,12 +461,12 @@ def gd_adagrad(
                     theta = soft_threshold(theta_temp, eta * lam)
                 else:
                     theta = theta - eta * adapted_grad
-            
+
             # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
-            
+
             # Check convergence (optional for SGD)
             if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
                 break
@@ -478,8 +506,17 @@ def gd_adagrad(
 
 
 def gd_rmsprop(
-    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta=0.9, eps=1e-8, tol=1e-10,
-    stochastic=False, batch_size=32
+    X,
+    y,
+    eta=1e-2,
+    num_iters=10_000,
+    method="ols",
+    lam=None,
+    beta=0.9,
+    eps=1e-8,
+    tol=1e-10,
+    stochastic=False,
+    batch_size=32,
 ):
     """
     Unified RMSProp for OLS, Ridge, and Lasso.
@@ -500,22 +537,22 @@ def gd_rmsprop(
         # Stochastic RMSProp
         m = int(n_samples / batch_size)  # number of minibatches
         n_epochs = num_iters  # treat num_iters as epochs for SGD
-        
+
         for epoch in range(n_epochs):
             # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
-            
+
             for i in range(m):
                 # Pick random minibatch
                 k = np.random.randint(m)
                 start_idx = k * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
-                
+
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
-                
+
                 # gradient based on method
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
@@ -535,12 +572,12 @@ def gd_rmsprop(
                     theta = soft_threshold(theta_temp, eta * lam)
                 else:
                     theta = theta - eta * adapted_grad
-            
+
             # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
-            
+
             # Check convergence (optional for SGD)
             if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
                 break
@@ -580,8 +617,19 @@ def gd_rmsprop(
 
 
 def gd_adam(
-    X, y, eta=1e-2, num_iters=10_000, method="ols", lam=None, beta1=0.9, beta2=0.999, 
-    eps=1e-8, tol=1e-10, amsgrad=False, stochastic=False, batch_size=32
+    X,
+    y,
+    eta=1e-2,
+    num_iters=10_000,
+    method="ols",
+    lam=None,
+    beta1=0.9,
+    beta2=0.999,
+    eps=1e-8,
+    tol=1e-10,
+    amsgrad=False,
+    stochastic=False,
+    batch_size=32,
 ):
     """
     Unified Adam optimizer for OLS, Ridge, and Lasso.
@@ -605,24 +653,24 @@ def gd_adam(
         m_batches = int(n_samples / batch_size)  # number of minibatches
         n_epochs = num_iters  # treat num_iters as epochs for SGD
         t = 0  # global step counter for bias correction
-        
+
         for epoch in range(n_epochs):
             # Shuffle data at the beginning of each epoch
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
-            
+
             for i in range(m_batches):
                 t += 1  # increment global step counter
-                
+
                 # Pick random minibatch
                 k = np.random.randint(m_batches)
                 start_idx = k * batch_size
                 end_idx = min(start_idx + batch_size, n_samples)
-                
+
                 X_batch = X_shuffled[start_idx:end_idx]
                 y_batch = y_shuffled[start_idx:end_idx]
-                
+
                 # gradient based on method
                 if method.lower() == "ols":
                     grad = OLS_gradient(X_batch, y_batch, theta)
@@ -654,12 +702,12 @@ def gd_adam(
                     theta = soft_threshold(theta_temp, eta * lam)
                 else:
                     theta = theta - eta * adapted_grad
-            
+
             # Calculate MSE on full dataset at end of epoch
             y_pred_full = X @ theta
             epoch_mse = mean_squared_error(y_true=y, y_pred=y_pred_full)
             mse_history.append(epoch_mse)
-            
+
             # Check convergence (optional for SGD)
             if epoch > 0 and abs(mse_history[-1] - mse_history[-2]) < tol:
                 break
@@ -708,34 +756,3 @@ def gd_adam(
                 break
 
     return theta, mse_history
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
