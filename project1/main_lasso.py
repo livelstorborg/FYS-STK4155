@@ -241,3 +241,109 @@ print("LASSO RESULTS (λ=0.01)")
 print("="*80)
 print(df_lasso.to_string(index=False))
 print("="*80)
+
+
+
+
+
+# ============================================================================
+#                       Comparing OLS, Ridge, Lasso
+# ============================================================================
+
+from sklearn.linear_model import Lasso
+
+DEGREES = range(1, 31)
+N = 100
+lam = 1e-2
+num_iters = 1500
+
+np.random.seed(42)
+x = np.linspace(-1, 1, N)
+random_noise = np.random.normal(0, 0.1, N)
+y_true = runge(x)
+y_noise = y_true + random_noise
+
+# Prepare data splits for each degree
+data_splits = {}
+for deg in DEGREES:
+    X = polynomial_features(x, deg)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y_noise, test_size=0.25, random_state=42
+    )
+    
+    # Scale data
+    X_train_s, y_train_s, X_mean, X_std, y_mean = scale_data(X_train, y_train)
+    X_test_s, y_test_s, _, _, _ = scale_data(X_test, y_test, X_mean, X_std, y_mean)
+    
+    x_train = X_train[:, 0]
+    x_test = X_test[:, 0]
+    data_splits[deg] = [X_train_s, X_test_s, y_train_s, y_test_s, x_train, x_test, y_mean]
+
+# Initialize results storage
+all_results = {
+    'ols': {'train_mse': [], 'test_mse': []},
+    'ridge': {'train_mse': [], 'test_mse': []},
+    'lasso': {'train_mse': [], 'test_mse': []}
+}
+
+# Fit models for all degrees
+for deg in DEGREES:
+    X_train_s, X_test_s, y_train_s, y_test_s = data_splits[deg][:4]
+    
+    analysis = RegressionAnalysis(
+        data_splits[deg], degree=deg, lam=lam, eta=0.1, num_iters=num_iters
+    )
+    
+    # Fit OLS and Ridge with analytical solutions
+    for method in ['ols', 'ridge']:
+        analysis.fit(models=method, opts='analytical')
+        
+        all_results[method]['train_mse'].append(
+            analysis.get_metric(method, 'analytical', 'train_mse')
+        )
+        all_results[method]['test_mse'].append(
+            analysis.get_metric(method, 'analytical', 'test_mse')
+        )
+    
+    # Fit Lasso with scikit-learn
+    lasso_model = Lasso(alpha=lam, max_iter=10000)
+    lasso_model.fit(X_train_s, y_train_s)
+    
+    y_train_pred = lasso_model.predict(X_train_s)
+    y_test_pred = lasso_model.predict(X_test_s)
+    
+    all_results['lasso']['train_mse'].append(np.mean((y_train_s - y_train_pred)**2))
+    all_results['lasso']['test_mse'].append(np.mean((y_test_s - y_test_pred)**2))
+
+def mse_degree_ols_ridge_lasso(results):
+    """Plot MSE vs polynomial degree for OLS, Ridge, and Lasso."""
+    
+    plt.figure(figsize=(8, 6))
+    
+    # OLS
+    plt.plot(DEGREES, results['ols']['train_mse'], 
+             label="OLS (train)", linewidth=2, color='darkviolet')
+    plt.plot(DEGREES, results['ols']['test_mse'], '--',
+             label="OLS (test)", linewidth=2, color='darkviolet')
+    
+    # Ridge
+    plt.plot(DEGREES, results['ridge']['train_mse'],
+             label="Ridge (train)", linewidth=2, color='#D63290')
+    plt.plot(DEGREES, results['ridge']['test_mse'], '--',
+             label="Ridge (test)", linewidth=2, color='#D63290')
+    
+    # Lasso
+    plt.plot(DEGREES, results['lasso']['train_mse'],
+             label="Lasso (train)", linewidth=2, color='#F2B44D')
+    plt.plot(DEGREES, results['lasso']['test_mse'], '--',
+             label="Lasso (test)", linewidth=2, color='#F2B44D')
+    
+    plt.xlabel("Polynomial Degree", fontsize=16)
+    plt.ylabel("MSE", fontsize=16)
+    plt.yscale('log')
+    plt.legend()
+    setup_plot_formatting()
+    plt.savefig("figs/mse_degree_ols_ridge_lasso.pdf", dpi=300)
+    plt.show()
+
+mse_degree_ols_ridge_lasso(all_results)
