@@ -55,3 +55,5 @@ uv run main_<name>.py
 
 **To run all main files and generate all figures, you can also use the Jupyter Notebook `results.ipynb`.**
 
+## Note: main_resampling.py
+This file takes over one hour to run due to calculating around 2 million models for bias-variance comparison. The precomputed data is stored in `cv_results` and used, by default, to plot the bias-variance heatmaps. The main_resampling.py file will still take around one minute to run, due to loading the precomputed results.
