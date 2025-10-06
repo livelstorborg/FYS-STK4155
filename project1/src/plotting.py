@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import os
 import seaborn as sns
 
@@ -34,8 +35,8 @@ def setup_plot_formatting():
     plt.tight_layout()
 
 
-# Exercise 1a)
-def mse_degree_ols(results_dict, sample_size):
+# ========== OLS ==========
+def mse_degree_ols(results):
     """
     Plot MSE vs polynomial degree for training and test data.
 
@@ -46,7 +47,6 @@ def mse_degree_ols(results_dict, sample_size):
     sample_size : int
         Sample size to plot
     """
-    results = results_dict[sample_size]
 
     plt.figure(figsize=(8, 6))
     plt.plot(
@@ -56,6 +56,7 @@ def mse_degree_ols(results_dict, sample_size):
         label="MSE (train)",
         linewidth=2,
         markersize=6,
+        color="darkviolet",
     )
     plt.plot(
         results["degrees"],
@@ -64,6 +65,7 @@ def mse_degree_ols(results_dict, sample_size):
         label="MSE (test)",
         linewidth=2,
         markersize=6,
+        color="#D63290",
     )
 
     min_test_mse = min(results["test_mse"])
@@ -71,20 +73,22 @@ def mse_degree_ols(results_dict, sample_size):
     plt.plot(
         min_degree,
         min_test_mse,
-        "rx",
-        markersize=12,
+        "*",
+        markersize=20,
         markeredgewidth=2,
+        color="#F2B44D",
+        markeredgecolor="black",
         label=f"Min Test MSE: {min_test_mse:.2f}",
     )
 
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"MSE", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/mse_vs_degree_ols.pdf")
+    plt.savefig("figs/mse_degree_ols.pdf", dpi=300, bbox_inches="tight")
     plt.show()
 
 
-def r2_degree_ols(results, sample_size):
+def r2_degree_ols(results):
     """
     Plot R² vs polynomial degree for training and test sets.
 
@@ -103,6 +107,7 @@ def r2_degree_ols(results, sample_size):
         label="R² (train)",
         linewidth=2,
         markersize=6,
+        color="darkviolet",
     )
     plt.plot(
         results["degrees"],
@@ -111,6 +116,7 @@ def r2_degree_ols(results, sample_size):
         label="R² (test)",
         linewidth=2,
         markersize=6,
+        color="#D63290",
     )
 
     max_test_r2 = max(results["test_r2"])
@@ -119,166 +125,176 @@ def r2_degree_ols(results, sample_size):
     plt.plot(
         max_degree,
         max_test_r2,
-        "rx",
-        markersize=12,
+        "*",
+        markersize=20,
         markeredgewidth=2,
+        color="#F2B44D",
+        markeredgecolor="black",
         label=f"Max Test R²: {max_test_r2:.2f}",
     )
     plt.xlabel("Polynomial Degree", fontsize=16)
     plt.ylabel(f"R²", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/r2_vs_degree_ols.pdf")
+    plt.savefig("figs/r2_degree_ols.pdf", dpi=300, bbox_inches="tight")
     plt.show()
 
 
-def theta_evolution_ols(degrees, theta_norms, sample_size):
+# ========== RIDGE ==========
+def mse_degree_ridge(results):
     """
-    Plot the evolution of the first parameter (theta1) across polynomial degrees.
+    Plot MSE vs polynomial degree for a specific lambda.
 
     Parameters
     ----------
-    degrees : list or range
-        Polynomial degrees
-    theta1_evolution : list
-        List of theta1 values for each degree
-    sample_size : int
-        Sample size for labeling
+    results_for_N : dict
+        Dictionary where keys are lambda values
+    lam : float
+        Lambda value to plot
+    """
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(
+        results["degrees"],
+        results["train_mse"],
+        "o-",
+        label="MSE (train)",
+        linewidth=2,
+        markersize=6,
+        color="darkviolet",
+    )
+    plt.plot(
+        results["degrees"],
+        results["test_mse"],
+        "o-",
+        label="MSE (test)",
+        linewidth=2,
+        markersize=6,
+        color="#D63290",
+    )
+
+    lam = results["lambda"]
+    min_test_mse = min(results["test_mse"])
+    min_degree = results["degrees"][results["test_mse"].index(min_test_mse)]
+    plt.plot(
+        min_degree,
+        min_test_mse,
+        "*",
+        markersize=20,
+        markeredgewidth=2,
+        color="#F2B44D",
+        markeredgecolor="black",
+        label=f"Min Test MSE: {min_test_mse:.2f}",
+    )
+
+    plt.xlabel("Polynomial Degree", fontsize=16)
+    plt.ylabel("MSE", fontsize=16)
+    setup_plot_formatting()
+    plt.savefig("figs/mse_degree_ridge.pdf", dpi=300, bbox_inches="tight")
+    plt.show()
+
+
+def r2_degree_ridge(results):
+    """
+    Plot R² vs polynomial degree - takes results dict directly.
     """
     plt.figure(figsize=(8, 6))
-    plt.plot(degrees, theta_norms, "o-", linewidth=2, markersize=6)
+    plt.plot(
+        results["degrees"],
+        results["train_r2"],
+        "o-",
+        label="R² (train)",
+        linewidth=2,
+        markersize=6,
+        color="darkviolet",
+    )
+    plt.plot(
+        results["degrees"],
+        results["test_r2"],
+        "o-",
+        label="R² (test)",
+        linewidth=2,
+        markersize=6,
+        color="#D63290",
+    )
+
+    max_test_r2 = max(results["test_r2"])
+    max_degree = results["degrees"][results["test_r2"].index(max_test_r2)]
+
+    plt.plot(
+        max_degree,
+        max_test_r2,
+        "*",
+        markersize=20,
+        markeredgewidth=2,
+        color="#F2B44D",
+        markeredgecolor="black",
+        label=f"Max Test R²: {max_test_r2:.2f}",
+    )
     plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(r"$\|\theta\|_2$", fontsize=16)
-    plt.yscale("log")  # Usually helpful since norms can grow exponentially
+    plt.ylabel("R²", fontsize=16)
     setup_plot_formatting()
-    plt.savefig("figs/theta_vs_degree_ols.pdf")
+    plt.savefig("figs/r2_degree_ridge.pdf", dpi=300, bbox_inches="tight")
     plt.show()
 
 
-def mse_degree_multiple(results_dict, sample_sizes):
+# ========== Theta for both methods ==========
+def plot_theta(theta: list, method: str):
     """
-    Plot test MSE vs polynomial degree for multiple sample sizes.
+    Plot the model parameters (theta) for a given method.
 
     Parameters
     ----------
-    results_dict : dict
-        Dictionary containing results for each sample size.
-    sample_sizes : list
-        List of sample sizes to include in the plot.
+    theta : list or np.ndarray
+        Model parameters to plot
+    method : str
+        Method name for labeling the plot
     """
-    plt.figure(figsize=(10, 6))
 
-    for N in sample_sizes:
-        results = results_dict[N]
-        plt.plot(
-            results["degrees"],
-            results["test_mse"],
-            label=f"Datasize = {N}",
-            linewidth=2,
-            markersize=6,
-        )
-
-    plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel("MSE (Test)", fontsize=16)
-    # plt.yscale("log")  # often useful for error plots
+    plt.figure(figsize=(8, 6))
     setup_plot_formatting()
-    plt.savefig("figs/mse_vs_degree_multiple_samples_ols.pdf")
+    for i, theta in enumerate(theta):
+        for param in theta:
+            plt.scatter(
+                i + 1,
+                param,
+                label=f"θ_{i}" if i == 0 else "",
+                s=100,
+                color="mediumorchid",
+                alpha=0.5,
+                edgecolors="black",
+            )
+    plt.xlabel("Polynomial Degree", fontsize=16)
+    plt.ylabel(rf"$\theta_{{{method}}}$", fontsize=16)
+    plt.savefig(f"figs/theta_{method}.pdf", dpi=300, bbox_inches="tight")
     plt.show()
 
 
-def mse_degree_lambdas(results_dict, lambda_values, sample_size):
-    """Plot MSE vs polynomial degree for different lambda values."""
-    plt.figure(figsize=(10, 6))
+# ========== Printing DataFrames
+def print_dataframe(df: pd.DataFrame, header: str, divider: str):
+    """
+    Function that prints a pd.DataFrame with good formatting.
 
-    results_by_lambda = results_dict[sample_size]
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Dataframe that is printed
+    header: string
+        Header
+    divider: str
+        symbol used for dividing tables and header
 
-    for lam in lambda_values:
-        results = results_by_lambda[lam]
-        plt.plot(
-            results["degrees"],
-            results["test_mse"],
-            "o-",
-            label=f"λ = {lam:.1e}",
-            linewidth=2,
-            markersize=4,
-        )
+    """
 
-    plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(f"MSE (Test), N = {sample_size}", fontsize=16)
-    plt.yscale("log")
-    setup_plot_formatting()
-    plt.savefig(f"figs/mse_vs_degree_lambdas_N{sample_size}.pdf")
-    plt.show()
+    print("\n" + divider * 80)
+    print(header)
+    print("=" * 80)
+    print(df.to_string(index=False))
+    print("\n" + divider * 80)
 
 
-def r2_degree_lambdas(results_dict, lambda_values, sample_size):
-    """Plot R² vs polynomial degree for different lambda values."""
-    plt.figure(figsize=(10, 6))
-
-    results_by_lambda = results_dict[sample_size]
-
-    for lam in lambda_values:
-        results = results_by_lambda[lam]
-        plt.plot(
-            results["degrees"],
-            results["test_r2"],
-            "o-",
-            label=f"λ = {lam:.1e}",
-            linewidth=2,
-            markersize=4,
-        )
-
-    plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(f"R² (Test), N = {sample_size}", fontsize=16)
-    setup_plot_formatting()
-    plt.savefig(f"figs/r2_vs_degree_lambdas_N{sample_size}.pdf")
-    plt.show()
-
-
-def theta_evolution_lambdas(
-    all_results, lambda_values, degrees, sample_size, include_ols=True
-):
-    """Plot theta1 evolution vs polynomial degree for different lambda values."""
-    plt.figure(figsize=(12, 8))
-
-    results_by_lambda = all_results[sample_size]
-
-    for lam in lambda_values:
-        results = results_by_lambda[lam]
-        theta1_values = [
-            instance.get_theta("ridge", "analytical")[0]
-            for instance in results["instances"]
-        ]
-        plt.plot(
-            degrees,
-            theta1_values,
-            "o-",
-            label=f"Ridge λ = {lam:.1e}",
-            linewidth=2,
-            markersize=4,
-        )
-
-    if include_ols:
-        first_results = results_by_lambda[lambda_values[0]]
-        ols_theta1_values = [
-            instance.get_theta("ols", "analytical")[0]
-            for instance in first_results["instances"]
-        ]
-        plt.plot(
-            degrees,
-            ols_theta1_values,
-            "--",
-            label="OLS (λ = 0)",
-            linewidth=3,
-            markersize=6,
-        )
-
-    plt.xlabel("Polynomial Degree", fontsize=16)
-    plt.ylabel(f"Evolution of $\\theta_1$, N = {sample_size}", fontsize=16)
-    setup_plot_formatting()
-    plt.savefig(f"figs/theta1_evolution_lambdas_N{sample_size}.pdf")
-    plt.show()
-
-
+# =====================================================================================================
+#                         Functions to make comparisons, used for analysis throughout
+# =====================================================================================================
 def compare(
     x, y_noise, y_true, solutions, sample_size, degree, lam, type=None, test=False
 ):
@@ -340,9 +356,9 @@ def compare(
     plt.legend(fontsize=16)
 
     title = (
-        f'Test split - {type if type else "Comparison"}'
+        f"Test split - {type if type else 'Comparison'}"
         if test
-        else f'Full dataset - {type if type else "Comparison"}'
+        else f"Full dataset - {type if type else 'Comparison'}"
     )
     plt.title(title, fontsize=16)
     plt.show()
@@ -415,11 +431,11 @@ def compare_gd(
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.legend(fontsize=16)
+    plt.legend(fontsize=14)
     title = (
-        f'Test split - GD Methods {type if type else ""}'
+        f"Test split - GD Methods {type if type else ''}"
         if test
-        else f'Full dataset - GD Methods {type if type else ""}'
+        else f"Full dataset - GD Methods {type if type else ''}"
     )
     plt.title(title, fontsize=16)
     plt.show()
@@ -484,12 +500,12 @@ def compare_sgd(
     plt.xlabel("x", fontsize=16)
     plt.ylabel(f"y(x), degree={degree}, N={sample_size}", fontsize=16)
     setup_plot_formatting()
-    plt.legend(fontsize=16)
+    plt.legend(fontsize=14)
 
     title = (
-        f'Test split - SGD Methods {type if type else ""}'
+        f"Test split - SGD Methods {type if type else ''}"
         if test
-        else f'Full dataset - SGD Methods {type if type else ""}'
+        else f"Full dataset - SGD Methods {type if type else ''}"
     )
     plt.title(title, fontsize=16)
     plt.show()
