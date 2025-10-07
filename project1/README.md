@@ -102,6 +102,7 @@ To reproduce all results and generate all figures in one place:
 ```bash
 uv run jupyter notebook code/results.ipynb
 ```
+additionally, you can run each cell in the notebook individually to generate figures for each problem.
 
 ## Key Features
 
