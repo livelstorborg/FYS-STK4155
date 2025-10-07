@@ -3,8 +3,8 @@
 This repository contains all projects for FYS-STK4155 – Applied Data Analysis and Machine Learning
 
 ## Group Members
-- Simon Sætre Thommesen [cafalche]
-- Carl Adam Falchenberg [simonsth]
+- Simon Sætre Thommesen [simonsth]
+- Carl Adam Falchenberg [cafalche]
 - Henrik Haug [heh]
 - Live Ljungqvist Storborg [livelst]
 
