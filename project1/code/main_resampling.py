@@ -661,7 +661,7 @@ if __name__ == "__main__":
     print("=" * 70)
 
     # Create results directory
-    os.makedirs("../cv_results", exist_ok=True)
+    os.makedirs("../cv_data", exist_ok=True)
 
     k_folds = 5
     seeds = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
@@ -699,7 +699,7 @@ if __name__ == "__main__":
     #         )
 
     #         # Save results
-    #         seed_dir = f"../cv_results/noise_{noise_level}/seed_{seed}"
+    #         seed_dir = f"../cv_data/noise_{noise_level}/seed_{seed}"
     #         os.makedirs(seed_dir, exist_ok=True)
     #         filename = f"{seed_dir}/cv_{noise_level}_seed{seed}_noise_std{config['noise_std']:.1f}.pkl"
 
@@ -725,7 +725,7 @@ if __name__ == "__main__":
         std = noise_std_map[noise_level]
         results_list = []
         for seed in seeds:
-            filename = f"../cv_results/noise_{noise_level}/seed_{seed}/cv_{noise_level}_seed{seed}_noise_std{std:.1f}.pkl"
+            filename = f"../cv_data/noise_{noise_level}/seed_{seed}/cv_{noise_level}_seed{seed}_noise_std{std:.1f}.pkl"
             with open(filename, "rb") as f:
                 results_list.append(pickle.load(f))
         return results_list
