@@ -7,8 +7,8 @@ PYTHON = python3
 
 
 clean:
-	rm -rf code/figs/*
-	rm -rf code/figs/
+	rm -rf figs/*
+	rm -rf figs/
 
 
 help:
