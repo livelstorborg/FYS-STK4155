@@ -144,6 +144,7 @@ To add a new package:
 ```bash
 uv add <package-name>       # Adds to dependencies
 uv add --dev <package-name> # Adds to dev dependencies
+```
 
 ## Course Information
 
