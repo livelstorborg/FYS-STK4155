@@ -1,0 +1,10 @@
+[project]
+name = "project2"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "scikit-learn",
+    "jupyter",
+]
