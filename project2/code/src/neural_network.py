@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class NeuralNetwork:
     def __init__(self, network_input_size, layer_output_sizes, 
                  activations, loss_fn, seed=None):
@@ -29,6 +32,8 @@ class NeuralNetwork:
             self.weights.append(W)
             self.biases.append(b)
             i_size = layer_output_size
+        # Number of layers (useful for optimizers)
+        self.n_layers = len(self.weights)
     
     def predict(self, inputs):
         """Feed forward to make predictions."""

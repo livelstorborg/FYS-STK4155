@@ -1,3 +1,8 @@
+import numpy as np
+from .metrics import accuracy
+
+
+
 
 
 ########################################################
@@ -5,8 +10,6 @@
 ########################################################
 
 
-
-# ---------- Training functions outside the class ----------
 def train_gd(nn, inputs, targets, learning_rate=0.01, epochs=100):
     """Basic gradient descent (full batch, no momentum)"""
     accuracies = []
@@ -23,7 +26,7 @@ def train_gd(nn, inputs, targets, learning_rate=0.01, epochs=100):
         
         # Track accuracy
         predictions = nn.predict(inputs)
-        acc = accuracy(predictions, targets)
+        acc = accuracy(targets, predictions)
         accuracies.append(acc)
     
     return accuracies
@@ -61,7 +64,7 @@ def train_momentum(nn, inputs, targets, batch_size=32, learning_rate=0.01,
         
         # Track accuracy
         predictions = nn.predict(inputs)
-        acc = accuracy(predictions, targets)
+        acc = accuracy(targets, predictions)
         accuracies.append(acc)
     
     return accuracies
