@@ -3,7 +3,7 @@ import numpy as np
 
 class NeuralNetwork:
     def __init__(self, network_input_size, layer_output_sizes, 
-                 activations, loss_fn, seed=None):
+                 activations, loss_fn, seed=None, lambda_reg=0.0, reg_type=None):
         """
         Initialize neural network (lecture style).
         
@@ -19,6 +19,10 @@ class NeuralNetwork:
             e.g., MSE() or CrossEntropy()
         seed : int
             Random seed
+        lambda_reg : float
+            Regularization strength (default: 0.0, no regularization)
+        reg_type : str or None
+            Regularization type: 'l1', 'l2', or None (default: None)
         """
         if seed is not None:
             np.random.seed(seed)
@@ -27,6 +31,8 @@ class NeuralNetwork:
         self.layer_output_sizes = layer_output_sizes
         self.activations = activations
         self.loss_fn = loss_fn
+        self.lambda_reg = lambda_reg
+        self.reg_type = reg_type
         
         # Initialize layers as list of (W, b) tuples (lecture style)
         self.layers = self._create_layers()
@@ -66,7 +72,7 @@ class NeuralNetwork:
         return layer_inputs, zs, a
     
     def compute_gradient(self, inputs, targets):
-        """Compute gradients using backpropagation."""
+        """Compute gradients using backpropagation with optional regularization."""
         layer_inputs, zs, predict = self._feed_forward_saver(inputs)
         layer_grads = [() for _ in self.layers]
         
@@ -79,8 +85,15 @@ class NeuralNetwork:
             
             # Compute gradients for this layer
             W, b = self.layers[i]
-            dW = delta.T @ layer_input  # ← REMOVE / inputs.shape[0]
-            db = np.sum(delta, axis=0)  # ← REMOVE / inputs.shape[0]
+            dW = delta.T @ layer_input
+            db = np.sum(delta, axis=0)
+            
+            # Add regularization term to weight gradients
+            if self.lambda_reg > 0 and self.reg_type is not None:
+                if self.reg_type.lower() == 'l2':
+                    dW += self.lambda_reg * W
+                elif self.reg_type.lower() == 'l1':
+                    dW += self.lambda_reg * np.sign(W)
             
             layer_grads[i] = (dW, db)
             
@@ -92,9 +105,23 @@ class NeuralNetwork:
                 delta = delta * self.activations[i-1].backward(zs[i-1])
         
         return layer_grads
+    
+    def compute_regularization_loss(self):
+        """Compute the regularization penalty term."""
+        if self.lambda_reg == 0 or self.reg_type is None:
+            return 0.0
+        
+        reg_loss = 0.0
+        for W, b in self.layers:
+            if self.reg_type.lower() == 'l2':
+                reg_loss += np.sum(W ** 2)
+            elif self.reg_type.lower() == 'l1':
+                reg_loss += np.sum(np.abs(W))
+        
+        return self.lambda_reg * reg_loss
 
 
-# Add properties for optimizer compatibility
+    # Add properties for optimizer compatibility
     @property
     def weights(self):
         """Get weights (for optimizer compatibility)."""

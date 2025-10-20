@@ -13,10 +13,14 @@ class Optimizer:
             layer_grads: List of (dW, db) tuples from compute_gradient
         """
         raise NotImplementedError
+    
+    def reset(self):
+        """Reset optimizer state between training runs."""
+        pass
 
 
 class GD(Optimizer):
-    """Plain Gradient Descent."""
+    """Plain Gradient Descent (batch or mini-batch)."""
     
     def __init__(self, eta=0.01):
         self.eta = eta
@@ -26,32 +30,6 @@ class GD(Optimizer):
         for i, ((W, b), (W_g, b_g)) in enumerate(zip(nn.layers, layer_grads)):
             W -= self.eta * W_g
             b -= self.eta * b_g
-            nn.layers[i] = (W, b)
-
-
-class SGD(Optimizer):
-    """SGD with momentum."""
-    
-    def __init__(self, eta=0.01, momentum=0.9):
-        self.eta = eta
-        self.momentum = momentum
-        self.velocities = None
-    
-    def update(self, nn, layer_grads):
-        """Update using SGD with momentum."""
-        if self.velocities is None:
-            self.velocities = [(np.zeros_like(W), np.zeros_like(b)) 
-                              for W, b in nn.layers]
-        
-        for i, ((W, b), (W_g, b_g), (v_W, v_b)) in enumerate(
-            zip(nn.layers, layer_grads, self.velocities)):
-            
-            v_W = self.momentum * v_W - self.eta * W_g
-            v_b = self.momentum * v_b - self.eta * b_g
-            W += v_W
-            b += v_b
-            
-            self.velocities[i] = (v_W, v_b)
             nn.layers[i] = (W, b)
 
 
@@ -83,6 +61,10 @@ class RMSprop(Optimizer):
 
             self.cache[i] = (cache_W, cache_b)
             nn.layers[i] = (W, b)
+    
+    def reset(self):
+        """Reset cache for new training run."""
+        self.cache = None
 
 
 class Adam(Optimizer):
@@ -127,3 +109,9 @@ class Adam(Optimizer):
             self.m[i] = (m_W, m_b)
             self.v[i] = (v_W, v_b)
             nn.layers[i] = (W, b)
+    
+    def reset(self):
+        """Reset moments and timestep for new training run."""
+        self.m = None
+        self.v = None
+        self.t = 0
