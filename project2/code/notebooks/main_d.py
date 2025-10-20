@@ -188,68 +188,6 @@ pivot = df_results.pivot_table(
 sns.heatmap(pivot, annot=True, fmt='.6f', cmap='viridis_r', cbar_kws={'label': 'Test MSE'})
 plt.title('Test MSE by Architecture and Activation Function')
 plt.tight_layout()
-plt.savefig('heatmap_architecture_activation.png', dpi=300)
+# plt.savefig('heatmap_architecture_activation.png', dpi=300)
 plt.show()
 
-
-# 2. Bar plot: Test MSE by number of layers (averaged over activations)
-plt.figure(figsize=(10, 6))
-layer_performance = df_results.groupby('num_layers').agg({
-    'mse_test': ['mean', 'std']
-}).reset_index()
-layer_performance.columns = ['num_layers', 'mse_mean', 'mse_std']
-
-plt.bar(layer_performance['num_layers'], layer_performance['mse_mean'], 
-        yerr=layer_performance['mse_std'], capsize=5, alpha=0.7)
-plt.xlabel('Number of Hidden Layers')
-plt.ylabel('Mean Test MSE')
-plt.title('Test MSE vs Network Depth (averaged over activation functions)')
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig('mse_vs_depth.png', dpi=300)
-plt.show()
-
-
-# 3. Comparison plot: Train vs Test MSE
-plt.figure(figsize=(12, 6))
-x_pos = np.arange(len(df_results))
-width = 0.35
-
-plt.bar(x_pos - width/2, df_results['mse_train'], width, label='Train MSE', alpha=0.7)
-plt.bar(x_pos + width/2, df_results['mse_test'], width, label='Test MSE', alpha=0.7)
-
-plt.xlabel('Configuration')
-plt.ylabel('MSE')
-plt.title('Train vs Test MSE for All Configurations')
-plt.xticks(x_pos, [f"{row['architecture'][:10]}\n{row['activation'][:5]}" 
-                   for _, row in df_results.iterrows()], rotation=45, ha='right')
-plt.legend()
-plt.grid(True, alpha=0.3, axis='y')
-plt.tight_layout()
-plt.savefig('train_vs_test_comparison.png', dpi=300)
-plt.show()
-
-
-# 4. Activation function comparison
-plt.figure(figsize=(10, 6))
-for activation in activation_configs.keys():
-    subset = df_results[df_results['activation'] == activation]
-    plt.plot(subset['num_layers'], subset['mse_test'], 
-             marker='o', label=activation, linewidth=2, markersize=8)
-
-plt.xlabel('Number of Hidden Layers')
-plt.ylabel('Test MSE')
-plt.title('Effect of Network Depth on Different Activation Functions')
-plt.legend()
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig('activation_comparison.png', dpi=300)
-plt.show()
-
-
-# Save results to CSV
-df_results.to_csv('part_d_results.csv', index=False)
-print("\n" + "=" * 60)
-print("Results saved to 'part_d_results.csv'")
-print("Plots saved as PNG files")
-print("=" * 60)
