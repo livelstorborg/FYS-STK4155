@@ -1,11 +1,13 @@
+# src/neural_network.py
 import numpy as np
 
 
 class NeuralNetwork:
     def __init__(self, network_input_size, layer_output_sizes, 
-                 activations, loss_fn, seed=None, lambda_reg=0.0, reg_type=None):
+                 activations, loss, seed=None, lambda_reg=0.0, 
+                 reg_type=None, weight_init='he'):
         """
-        Initialize neural network (lecture style).
+        Initialize neural network.
         
         Parameters:
         -----------
@@ -14,15 +16,17 @@ class NeuralNetwork:
         layer_output_sizes : list of int
             Number of neurons in each layer (including output)
         activations : list of Activation objects
-            e.g., [Sigmoid(), Linear()]
-        loss_fn : Loss object
+            e.g., [ReLU(), ReLU(), Softmax()]
+        loss : Loss object
             e.g., MSE() or CrossEntropy()
         seed : int
-            Random seed
+            Random seed for reproducibility
         lambda_reg : float
             Regularization strength (default: 0.0, no regularization)
         reg_type : str or None
-            Regularization type: 'l1', 'l2', or None (default: None)
+            Regularization type: 'l1', 'l2', or None
+        weight_init : str
+            Weight initialization: 'he', 'xavier', or 'small'
         """
         if seed is not None:
             np.random.seed(seed)
@@ -30,24 +34,86 @@ class NeuralNetwork:
         self.network_input_size = network_input_size
         self.layer_output_sizes = layer_output_sizes
         self.activations = activations
-        self.loss_fn = loss_fn
+        self.loss = loss
         self.lambda_reg = lambda_reg
         self.reg_type = reg_type
+        self.weight_init = weight_init
         
-        # Initialize layers as list of (W, b) tuples (lecture style)
+        # Initialize layers as list of (W, b) tuples
         self.layers = self._create_layers()
         self.n_layers = len(self.layers)
     
     def _create_layers(self):
-        """Create layers with random initialization."""
+        """Create layers with smart weight initialization."""
         layers = []
         i_size = self.network_input_size
+        
         for layer_output_size in self.layer_output_sizes:
-            W = np.random.randn(layer_output_size, i_size) * 0.01
+            # Choose initialization scale based on method
+            if self.weight_init == 'he':
+                # He initialization (good for ReLU)
+                scale = np.sqrt(2.0 / i_size)
+            elif self.weight_init == 'xavier':
+                # Xavier/Glorot initialization (good for Sigmoid/Tanh)
+                scale = np.sqrt(1.0 / i_size)
+            else:
+                # Small random weights
+                scale = 0.01
+            
+            W = np.random.randn(layer_output_size, i_size) * scale
             b = np.zeros(layer_output_size)
+            
             layers.append((W, b))
             i_size = layer_output_size
+        
         return layers
+    
+    def summary(self):
+        """
+        Print model architecture summary (TensorFlow style).
+        """
+        print("=" * 65)
+        print("Model Summary")
+        print("=" * 65)
+        print(f"{'Layer (type)':<25} {'Output Shape':<20} {'Param #':<10}")
+        print("=" * 65)
+        
+        total_params = 0
+        trainable_params = 0
+        
+        # Input layer
+        print(f"{'Input':<25} {f'({self.network_input_size},)':<20} {'0':<10}")
+        print("-" * 65)
+        
+        current_input = self.network_input_size
+        for i, ((W, b), activation) in enumerate(zip(self.layers, self.activations)):
+            layer_name = f"Dense_{i+1} ({activation.__class__.__name__})"
+            output_shape = f"({W.shape[0]},)"
+            
+            # Calculate parameters: weights + biases
+            n_params = W.size + b.size
+            total_params += n_params
+            trainable_params += n_params
+            
+            print(f"{layer_name:<25} {output_shape:<20} {n_params:<10}")
+            print("-" * 65)
+            
+            current_input = W.shape[0]
+        
+        print("=" * 65)
+        print(f"Total params: {total_params:,}")
+        print(f"Trainable params: {trainable_params:,}")
+        print(f"Non-trainable params: 0")
+        
+        # Additional info
+        print("=" * 65)
+        print(f"Loss function: {self.loss.__class__.__name__}")
+        print(f"Weight initialization: {self.weight_init}")
+        if self.lambda_reg > 0:
+            print(f"Regularization: {self.reg_type.upper()} (λ={self.lambda_reg})")
+        else:
+            print("Regularization: None")
+        print("=" * 65)
     
     def predict(self, inputs):
         """Simple feed forward pass."""
@@ -77,7 +143,7 @@ class NeuralNetwork:
         layer_grads = [() for _ in self.layers]
         
         # Start with output layer error (from loss function)
-        delta = self.loss_fn.backward(targets, predict)
+        delta = self.loss.backward(targets, predict)
         
         # Backpropagate through layers
         for i in reversed(range(len(self.layers))):
@@ -88,7 +154,7 @@ class NeuralNetwork:
             dW = delta.T @ layer_input
             db = np.sum(delta, axis=0)
             
-            # Add regularization term to weight gradients
+            # Add regularization term to weight gradients (NOT biases)
             if self.lambda_reg > 0 and self.reg_type is not None:
                 if self.reg_type.lower() == 'l2':
                     dW += self.lambda_reg * W
@@ -120,8 +186,7 @@ class NeuralNetwork:
         
         return self.lambda_reg * reg_loss
 
-
-    # Add properties for optimizer compatibility
+    # Properties for optimizer compatibility
     @property
     def weights(self):
         """Get weights (for optimizer compatibility)."""

@@ -1,3 +1,4 @@
+# src/train.py
 import numpy as np
 from .metrics import mse, accuracy
 
@@ -46,13 +47,10 @@ def check_convergence(epoch, history, tol_relative=1e-6, tol_absolute=1e-10,
     return False, False, None
 
 
-
-
-
 def train(nn, X_train, y_train, X_val, y_val, optimizer,
           epochs=100, batch_size=32, stochastic=True, task='regression', 
           tol_relative=1e-6, tol_absolute=1e-10, early_stopping=True,
-          verbose=True, seed=None):
+          patience=10, verbose=True, seed=None):
     """
     Training function supporting both full-batch GD and mini-batch SGD.
     Works with any optimizer from optimizers.py (GD, RMSprop, Adam).
@@ -68,7 +66,8 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
         task: 'regression' or 'classification'
         tol_relative: Relative change threshold for convergence
         tol_absolute: Absolute change threshold for convergence
-        early_stopping: If True, stop when converged or diverged
+        early_stopping: If True, stop when converged or validation doesn't improve
+        patience: Number of epochs to wait for validation improvement
         verbose: Print progress every 10 epochs
         seed: Random seed for reproducibility
     
@@ -91,6 +90,12 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
         'final_epoch': epochs - 1,
         'convergence_message': None
     }
+    
+    # Early stopping tracking
+    best_val_loss = float('inf')
+    patience_counter = 0
+    best_weights = None
+    best_biases = None
     
     for epoch in range(epochs):
         epoch_loss = 0
@@ -118,7 +123,7 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
                 
                 # Track batch loss (including regularization)
                 batch_pred = nn.predict(X_batch)
-                batch_loss = nn.loss_fn.forward(y_batch, batch_pred)
+                batch_loss = nn.loss.forward(y_batch, batch_pred)
                 epoch_loss += batch_loss
             
             avg_train_loss = epoch_loss / n_batches
@@ -129,7 +134,7 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
             optimizer.update(nn, layer_grads)
             
             train_pred = nn.predict(X_train)
-            avg_train_loss = nn.loss_fn.forward(y_train, train_pred)
+            avg_train_loss = nn.loss.forward(y_train, train_pred)
         
         # Add regularization to training loss
         avg_train_loss += nn.compute_regularization_loss()
@@ -139,7 +144,7 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
         train_metric = metric_fn(y_train, train_pred)
         
         val_pred = nn.predict(X_val)
-        val_loss = nn.loss_fn.forward(y_val, val_pred) + nn.compute_regularization_loss()
+        val_loss = nn.loss.forward(y_val, val_pred) + nn.compute_regularization_loss()
         val_metric = metric_fn(y_val, val_pred)
         
         # Save history
@@ -154,10 +159,32 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
             mode = 'SGD' if stochastic else 'GD'
             print(f"[{mode}] Epoch {epoch:3d}/{epochs} - "
                   f"Train Loss: {avg_train_loss:.4f}, "
+                  f"Val Loss: {val_loss:.4f}, "
                   f"Val {metric_name}: {val_metric:.4f}")
         
-        # Check convergence (after first epoch)
-        if early_stopping and epoch > 0:
+        # Early stopping on validation loss
+        if early_stopping:
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                patience_counter = 0
+                # Save best weights
+                best_weights = [W.copy() for W, b in nn.layers]
+                best_biases = [b.copy() for W, b in nn.layers]
+            else:
+                patience_counter += 1
+            
+            if patience_counter >= patience:
+                history['final_epoch'] = epoch
+                history['convergence_message'] = f"Early stopping at epoch {epoch} (patience={patience})"
+                if verbose:
+                    print(history['convergence_message'])
+                # Restore best weights
+                if best_weights is not None:
+                    nn.set_weights_biases(best_weights, best_biases)
+                break
+        
+        # Check convergence/divergence (after first epoch)
+        if epoch > 0:
             converged, diverged, message = check_convergence(
                 epoch, history, tol_relative, tol_absolute, 
                 warmup=10, stochastic=stochastic
