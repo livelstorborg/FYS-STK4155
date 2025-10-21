@@ -56,6 +56,52 @@ def Ridge_parameters(X, y, lam):
     n = X.shape[1]
     return np.linalg.inv(X.T @ X + lam * np.eye(n)) @ X.T @ y
 
+def lasso_gd(X, y, lam=0.01, eta=0.01, max_iter=1000, tol=1e-6):
+    """
+    Lasso regression using Gradient Descent.
+    
+    Minimizes: Loss = ||y - Xθ||² + λ||θ||₁
+    
+    Args:
+        X: Design matrix (n_samples, n_features)
+        y: Target values (n_samples,)
+        lam: L1 regularization strength (lambda)
+        eta: Learning rate
+        max_iter: Maximum number of iterations
+        tol: Convergence tolerance
+    
+    Returns:
+        theta: Learned parameters
+    """
+    n_samples, n_features = X.shape
+    theta = np.zeros(n_features)
+    
+    for iteration in range(max_iter):
+        # Predictions
+        y_pred = X @ theta
+        
+        # Gradient of MSE loss: -(2/n) * X^T * (y - y_pred)
+        residual = y - y_pred
+        grad_mse = -(2.0 / n_samples) * (X.T @ residual)
+        
+        # Gradient of L1 penalty: λ * sign(θ)
+        grad_l1 = lam * np.sign(theta)
+        
+        # Total gradient
+        grad = grad_mse + grad_l1
+        
+        # Update parameters
+        theta_new = theta - eta * grad
+        
+        # Check convergence
+        if np.linalg.norm(theta_new - theta) < tol:
+            print(f"Converged at iteration {iteration}")
+            break
+        
+        theta = theta_new
+    
+    return theta
+
 
 def inverse_scale_y(y_scaled, y_mean):
     """
