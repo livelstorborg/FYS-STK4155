@@ -49,14 +49,20 @@ def accuracy(y_true, y_pred):
     Returns:
         float: Accuracy between 0 and 1
     """
-    y_true = np.asarray(y_true).ravel().astype(int)
-    
+    y_true = np.asarray(y_true)
+    # If y_true is one-hot (2D), convert to class indices
+    if y_true.ndim > 1:
+        y_true = np.argmax(y_true, axis=1)
+    else:
+        y_true = y_true.ravel().astype(int)
+
     # If predictions are probabilities (2D), convert to class labels
+    y_pred = np.asarray(y_pred)
     if y_pred.ndim > 1:
         y_pred = np.argmax(y_pred, axis=1)
     else:
-        y_pred = np.asarray(y_pred).ravel().astype(int)
-    
+        y_pred = y_pred.ravel().astype(int)
+
     return np.mean(y_true == y_pred)
 
 
@@ -72,12 +78,18 @@ def confusion_matrix(y_true, y_pred, n_classes=None):
     Returns:
         np.ndarray: Confusion matrix (n_classes, n_classes)
     """
-    y_true = np.asarray(y_true).ravel().astype(int)
-    
+    y_true = np.asarray(y_true)
+    # If y_true is one-hot (2D), convert to class indices
+    if y_true.ndim > 1:
+        y_true = np.argmax(y_true, axis=1)
+    else:
+        y_true = y_true.ravel().astype(int)
+
+    y_pred = np.asarray(y_pred)
     if y_pred.ndim > 1:
         y_pred = np.argmax(y_pred, axis=1)
     else:
-        y_pred = np.asarray(y_pred).ravel().astype(int)
+        y_pred = y_pred.ravel().astype(int)
     
     if n_classes is None:
         n_classes = max(np.max(y_true), np.max(y_pred)) + 1
