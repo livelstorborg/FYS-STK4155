@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import os
 
 # Match Project 1 style
@@ -13,6 +14,49 @@ plt.rcParams.update({
 })
 
 os.makedirs("figs", exist_ok=True)
+
+
+# For exercise e)
+def lambda_eta_heatmap(metric_array, eta_vals, lambda_vals, 
+                       metric_name='MSE', dataset='Train',
+                       cmap='viridis', figsize=(10, 8), annot=True):
+    """
+    Create heatmap visualization of grid search results.
+    
+    Args:
+        metric_array: 2D array of shape (n_eta, n_lambda) with metric values
+        eta_vals: Learning rates (y-axis)
+        lambda_vals: Lambda values (x-axis)
+        metric_name: Name of metric (e.g., 'MSE', 'R²')
+        dataset: Dataset name (e.g., 'Train', 'Test', 'Validation')
+        cmap: Colormap name
+        figsize: Figure size
+        annot: Whether to annotate cells with values
+    
+    Returns:
+        fig, ax: Matplotlib figure and axis
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Create heatmap
+    sns.heatmap(
+        metric_array,
+        annot=annot,
+        fmt='.4f' if annot else None,
+        cmap=cmap,
+        ax=ax,
+        xticklabels=[f'{np.log10(lam)}' for lam in lambda_vals],
+        yticklabels=[f'{np.log10(eta)}' for eta in eta_vals],
+        cbar_kws={'label': metric_name}
+    )
+    
+    ax.set_title(f'{dataset} {metric_name}', fontsize=14, fontweight='bold')
+    ax.set_xlabel(r'$\lambda$', fontsize=12)
+    ax.set_ylabel(r'$\eta$', fontsize=12)
+    
+    plt.tight_layout()
+    
+    return fig, ax
 
 
 # ========================================
