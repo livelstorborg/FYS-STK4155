@@ -1,4 +1,8 @@
 import numpy as np
+from .neural_network import NeuralNetwork
+from .training import train
+from .losses import MSE
+from .metrics import mse
 
 
 def runge(x):
@@ -115,3 +119,63 @@ def inverse_scale_y(y_scaled, y_mean):
         Original scale y values
     """
     return y_scaled + y_mean
+
+
+def find_best_eta(eta_vals, layer_sizes, activations, optimizer_class, 
+                  X_train_s, y_train_s, X_test_s, y_test_s, 
+                  y_mean, y_test_real, 
+                  epochs=1000, batch_size=32, network_input_size=1,
+                  loss=None, seed=42):
+    """
+    Find best learning rate for a single architecture.
+    
+    Returns:
+        dict with 'eta', 'mse', 'history', 'nn'
+    """
+    if loss is None:
+        loss = MSE()
+    
+    best_eta = None
+    best_mse = float('inf')
+    best_history = None
+    best_nn = None
+    
+    optimizer_name = optimizer_class.__name__
+    
+    for eta in eta_vals:
+        nn = NeuralNetwork(
+            network_input_size=network_input_size,
+            layer_output_sizes=layer_sizes,
+            activations=activations,
+            loss=loss,
+            seed=seed
+        )
+        
+        history = train(
+            nn, X_train_s, y_train_s, X_test_s, y_test_s,
+            optimizer_class(eta),
+            epochs=epochs,
+            batch_size=batch_size,
+            task='regression',
+            early_stopping=False,
+            patience=20,
+            verbose=False,
+            seed=seed
+        )
+        
+        y_pred_s = nn.predict(X_test_s)
+        y_pred = inverse_scale_y(y_pred_s, y_mean)
+        test_mse = mse(y_test_real, y_pred)
+        
+        if test_mse < best_mse:
+            best_mse = test_mse
+            best_eta = eta
+            best_history = history
+            best_nn = nn
+    
+    return {
+        'eta': best_eta,
+        'mse': best_mse,
+        'history': best_history,
+        'nn': best_nn
+    }
