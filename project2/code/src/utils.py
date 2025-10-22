@@ -3,6 +3,7 @@ from .neural_network import NeuralNetwork
 from .training import train
 from .losses import MSE
 from .metrics import mse
+from .optimizers import Adam, RMSprop, GD
 
 
 def runge(x):
@@ -120,62 +121,105 @@ def inverse_scale_y(y_scaled, y_mean):
     """
     return y_scaled + y_mean
 
-
-def find_best_eta(eta_vals, layer_sizes, activations, optimizer_class, 
-                  X_train_s, y_train_s, X_test_s, y_test_s, 
-                  y_mean, y_test_real, 
-                  epochs=1000, batch_size=32, network_input_size=1,
-                  loss=None, seed=42):
+def find_best_eta(layer_sizes, activations, X_train, y_train, X_test, y_test, 
+                  y_mean, optimizer_type='adam', eta_vals=None, 
+                  epochs=500, batch_size=32, seed=42):
     """
-    Find best learning rate for a single architecture.
+    Find the best learning rate for a given architecture.
+    
+    Parameters:
+    -----------
+    layer_sizes : list
+        Network architecture (e.g., [50, 1])
+    activations : list
+        Activation functions for each layer
+    X_train, y_train : scaled training data
+    X_test, y_test : scaled test data
+    y_mean : for inverse scaling
+    optimizer_type : 'adam', 'rmsprop', or 'gd'
+    eta_vals : array of learning rates to test
     
     Returns:
-        dict with 'eta', 'mse', 'history', 'nn'
+    --------
+    best_eta : float
+        Best learning rate found
+    best_test_mse : float
+        MSE with best learning rate
+    results : dict
+        All results for plotting
     """
-    if loss is None:
-        loss = MSE()
+    if eta_vals is None:
+        eta_vals = np.logspace(-5, -1, 5)
     
-    best_eta = None
-    best_mse = float('inf')
-    best_history = None
-    best_nn = None
-    
-    optimizer_name = optimizer_class.__name__
+    test_mse_list = []
+    train_mse_list = []
     
     for eta in eta_vals:
-        nn = NeuralNetwork(
-            network_input_size=network_input_size,
+        # Create model
+        model = NeuralNetwork(
+            network_input_size=1,
             layer_output_sizes=layer_sizes,
             activations=activations,
-            loss=loss,
-            seed=seed
+            loss=MSE(),
+            seed=seed,
+            lambda_reg=0.0,
+            reg_type=None,
+            weight_init='xavier'
         )
         
-        history = train(
-            nn, X_train_s, y_train_s, X_test_s, y_test_s,
-            optimizer_class(eta),
+        # Select optimizer
+        if optimizer_type == 'adam':
+            optimizer = Adam(eta=eta)
+        elif optimizer_type == 'rmsprop':
+            optimizer = RMSprop(eta=eta)
+        else:  # Plain GD
+            optimizer = GD(eta=eta)  # Or your GD class if you have one
+        
+        # Train
+        train(
+            nn=model,
+            X_train=X_train,
+            y_train=y_train,
+            X_val=X_test,
+            y_val=y_test,
+            optimizer=optimizer,
             epochs=epochs,
-            batch_size=batch_size,
+            batch_size=batch_size if optimizer_type != 'gd' else len(X_train),
+            stochastic=(optimizer_type != 'gd'),
             task='regression',
-            early_stopping=False,
-            patience=20,
+            early_stopping=True,
+            patience=50,
             verbose=False,
             seed=seed
         )
         
-        y_pred_s = nn.predict(X_test_s)
-        y_pred = inverse_scale_y(y_pred_s, y_mean)
-        test_mse = mse(y_test_real, y_pred)
+        # Evaluate
+        y_train_pred = inverse_scale_y(model.predict(X_train), y_mean)
+        y_test_pred = inverse_scale_y(model.predict(X_test), y_mean)
+        y_train_real = inverse_scale_y(y_train, y_mean)
+        y_test_real = inverse_scale_y(y_test, y_mean)
         
-        if test_mse < best_mse:
-            best_mse = test_mse
-            best_eta = eta
-            best_history = history
-            best_nn = nn
+        train_mse_val = mse(y_train_real, y_train_pred)
+        test_mse_val = mse(y_test_real, y_test_pred)
+        
+        test_mse_list.append(test_mse_val)
+        train_mse_list.append(train_mse_val)
+        
+        print(f"  η={eta:.6f}: Train MSE={train_mse_val:.6f}, Test MSE={test_mse_val:.6f}")
     
-    return {
-        'eta': best_eta,
-        'mse': best_mse,
-        'history': best_history,
-        'nn': best_nn
+    # Find best
+    best_idx = np.argmin(test_mse_list)
+    best_eta = eta_vals[best_idx]
+    best_test_mse = test_mse_list[best_idx]
+    best_train_mse = train_mse_list[best_idx]
+    
+    results = {
+        'eta_vals': eta_vals,
+        'train_mse': np.array(train_mse_list),
+        'test_mse': np.array(test_mse_list),
+        'best_eta': best_eta,
+        'best_train_mse': best_train_mse,
+        'best_test_mse': best_test_mse
     }
+    
+    return best_eta, best_test_mse, results

@@ -5,7 +5,7 @@ import numpy as np
 class NeuralNetwork:
     def __init__(self, network_input_size, layer_output_sizes, 
                  activations, loss, seed=None, lambda_reg=0.0, 
-                 reg_type=None, weight_init='he'):
+                 reg_type=None, weight_init='normal'):
         """
         Initialize neural network.
         
@@ -43,29 +43,53 @@ class NeuralNetwork:
         self.layers = self._create_layers()
         self.n_layers = len(self.layers)
     
+    # def _create_layers(self):
+    #     """Create layers with smart weight initialization."""
+    #     layers = []
+    #     i_size = self.network_input_size
+        
+    #     for layer_output_size in self.layer_output_sizes:
+    #         # Choose initialization scale based on method
+    #         if self.weight_init == 'he':
+    #             # He initialization (good for ReLU)
+    #             scale = np.sqrt(2.0 / i_size)
+    #         elif self.weight_init == 'xavier':
+    #             # Xavier/Glorot initialization (good for Sigmoid/Tanh)
+    #             scale = np.sqrt(1.0 / i_size)
+    #         else:
+    #             # Small random weights
+    #             scale = 0.01
+            
+    #         W = np.random.randn(layer_output_size, i_size) * scale
+    #         b = np.zeros(layer_output_size)
+            
+    #         layers.append((W, b))
+    #         i_size = layer_output_size
+        
+    #     return layers
+
+
     def _create_layers(self):
-        """Create layers with smart weight initialization."""
+        """Create layers and initialize weights and biases."""
         layers = []
         i_size = self.network_input_size
         
         for layer_output_size in self.layer_output_sizes:
-            # Choose initialization scale based on method
-            if self.weight_init == 'he':
-                # He initialization (good for ReLU)
-                scale = np.sqrt(2.0 / i_size)
-            elif self.weight_init == 'xavier':
-                # Xavier/Glorot initialization (good for Sigmoid/Tanh)
+            if self.weight_init == 'xavier':
+                # Xavier/Glorot for Sigmoid (variance-preserving)
                 scale = np.sqrt(1.0 / i_size)
+            elif self.weight_init == 'normal':
+                # Simple normal distribution as project specifies
+                scale = 0.1  # or a small value like 0.01
             else:
-                # Small random weights
                 scale = 0.01
             
             W = np.random.randn(layer_output_size, i_size) * scale
-            b = np.zeros(layer_output_size)
+            b = np.zeros(layer_output_size)  # Initialize biases to zero (standard practice)
             
             layers.append((W, b))
             i_size = layer_output_size
-        
+    
         return layers
     
     def summary(self):

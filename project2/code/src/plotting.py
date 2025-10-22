@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import os
+from matplotlib.patches import Rectangle
 
 # Match Project 1 style
 plt.rcParams.update({
@@ -14,6 +15,32 @@ plt.rcParams.update({
 })
 
 os.makedirs("figs", exist_ok=True)
+
+
+def plot_learning_curves(train_loss, val_loss, epochs=None):
+    """
+    Simple learning curve plot.
+    
+    Parameters:
+    -----------
+    train_loss : array-like
+        Training loss values
+    val_loss : array-like
+        Validation loss values
+    epochs : array-like, optional
+        Epoch numbers. If None, uses 1, 2, 3, ...
+    """
+    if epochs is None:
+        epochs = range(1, len(train_loss) + 1)
+    
+    plt.figure(figsize=(8, 6))
+    plt.plot(epochs, train_loss, label='Train')
+    plt.plot(epochs, val_loss, label='Validation')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.show()
 
 
 # For exercise e)
@@ -45,7 +72,6 @@ def lambda_eta_heatmap(metric_array, eta_vals, lambda_vals,
     i_best, j_best = best_idx
     
     # Add red box around best cell
-    from matplotlib.patches import Rectangle
     rect = Rectangle((j_best, i_best), 1, 1, 
                      linewidth=3, edgecolor='red', facecolor='none')
     ax.add_patch(rect)
