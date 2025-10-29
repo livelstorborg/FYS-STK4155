@@ -50,18 +50,30 @@ class NeuralNetwork:
         layers = []
         i_size = self.network_input_size
         
-        for layer_output_size in self.layer_output_sizes:
-            if self.weight_init_scale == None:
-                scale = 1.0
+        for idx, layer_output_size in enumerate(self.layer_output_sizes):
+            # Use activation-aware initialization
+            activation_name = self.activations[idx].__class__.__name__
+            
+            if activation_name in ['ReLU', 'LeakyReLU']:
+                # He initialization: std = sqrt(2/fan_in)
+                std = np.sqrt(2.0 / i_size)
+            elif activation_name in ['Sigmoid', 'Tanh']:
+                # Xavier initialization: std = sqrt(2/(fan_in + fan_out))
+                std = np.sqrt(2.0 / (i_size + layer_output_size))
             else:
-                scale = self.weight_init_scale
-
-            W = np.random.randn(layer_output_size, i_size) * scale
+                # Default for Linear
+                std = np.sqrt(1.0 / i_size)
+            
+            # Override with manual scale if provided
+            if self.weight_init_scale is not None:
+                std = self.weight_init_scale
+            
+            W = np.random.randn(layer_output_size, i_size) * std  # Keep your dimension convention
             b = np.zeros(layer_output_size)
             
             layers.append((W, b))
             i_size = layer_output_size
-    
+
         return layers
     
 
