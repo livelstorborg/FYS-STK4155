@@ -1,4 +1,8 @@
 import numpy as np
+import pandas as pd
+import json
+from pathlib import Path
+from sklearn.model_selection import train_test_split
 from .neural_network import NeuralNetwork
 from .training import train
 from .losses import MSE
@@ -61,51 +65,7 @@ def Ridge_parameters(X, y, lam):
     n = X.shape[1]
     return np.linalg.inv(X.T @ X + lam * np.eye(n)) @ X.T @ y
 
-def lasso_gd(X, y, lam=0.01, eta=0.01, max_iter=1000, tol=1e-6):
-    """
-    Lasso regression using Gradient Descent.
-    
-    Minimizes: Loss = ||y - Xθ||² + λ||θ||₁
-    
-    Args:
-        X: Design matrix (n_samples, n_features)
-        y: Target values (n_samples,)
-        lam: L1 regularization strength (lambda)
-        eta: Learning rate
-        max_iter: Maximum number of iterations
-        tol: Convergence tolerance
-    
-    Returns:
-        theta: Learned parameters
-    """
-    n_samples, n_features = X.shape
-    theta = np.zeros(n_features)
-    
-    for iteration in range(max_iter):
-        # Predictions
-        y_pred = X @ theta
-        
-        # Gradient of MSE loss: -(2/n) * X^T * (y - y_pred)
-        residual = y - y_pred
-        grad_mse = -(2.0 / n_samples) * (X.T @ residual)
-        
-        # Gradient of L1 penalty: λ * sign(θ)
-        grad_l1 = lam * np.sign(theta)
-        
-        # Total gradient
-        grad = grad_mse + grad_l1
-        
-        # Update parameters
-        theta_new = theta - eta * grad
-        
-        # Check convergence
-        if np.linalg.norm(theta_new - theta) < tol:
-            print(f"Converged at iteration {iteration}")
-            break
-        
-        theta = theta_new
-    
-    return theta
+
 
 
 def inverse_scale_y(y_scaled, y_mean):
@@ -164,7 +124,7 @@ def find_best_eta(layer_sizes, activations, X_train, y_train, X_test, y_test,
             seed=seed,
             lambda_reg=0.0,
             reg_type=None,
-            weight_init='xavier'
+            weight_init='normal'
         )
         
         # Select optimizer
@@ -172,8 +132,8 @@ def find_best_eta(layer_sizes, activations, X_train, y_train, X_test, y_test,
             optimizer = Adam(eta=eta)
         elif optimizer_type == 'rmsprop':
             optimizer = RMSprop(eta=eta)
-        else:  # Plain GD
-            optimizer = GD(eta=eta)  # Or your GD class if you have one
+        else:  
+            optimizer = GD(eta=eta)  
         
         # Train
         train(
@@ -187,7 +147,7 @@ def find_best_eta(layer_sizes, activations, X_train, y_train, X_test, y_test,
             batch_size=batch_size if optimizer_type != 'gd' else len(X_train),
             stochastic=(optimizer_type != 'gd'),
             task='regression',
-            early_stopping=True,
+            early_stopping=False,
             patience=50,
             verbose=False,
             seed=seed
@@ -223,3 +183,286 @@ def find_best_eta(layer_sizes, activations, X_train, y_train, X_test, y_test,
     }
     
     return best_eta, best_test_mse, results
+
+def find_best_N_eta(N_list, eta_vals, layer_sizes, activations, 
+                    optimizer_type='adam', epochs=500, batch_size=32, 
+                    noise_std=0.1, test_size=0.2, seed=42):
+    """
+    Find the best combination of N (sample size) and eta (learning rate).
+    
+    Returns:
+    --------
+    test_mse_matrix : 2D array (n_etas x n_Ns)
+    train_mse_matrix : 2D array (n_etas x n_Ns)
+    best_eta : float
+    best_N : int
+    """
+    n_etas = len(eta_vals)
+    n_Ns = len(N_list)
+    
+    # Initialize result matrices
+    test_mse_matrix = np.zeros((n_etas, n_Ns))
+    train_mse_matrix = np.zeros((n_etas, n_Ns))
+    
+
+    
+    for j, N in enumerate(N_list):
+
+        
+        # Generate data with fixed seed
+        np.random.seed(seed)
+        x = np.linspace(-1, 1, N)
+        y_true = runge(x)
+        y_noise = y_true + np.random.normal(0, noise_std, N)
+        
+        # Split data
+        X_train_raw, X_test_raw, y_train_nn, y_test_nn = train_test_split(
+            x.reshape(-1, 1), y_noise.reshape(-1, 1), 
+            test_size=test_size, random_state=seed
+        )
+        
+        # Scale data
+        X_train_s, y_train_s, X_mean, X_std, y_mean = scale_data(
+            X_train_raw, y_train_nn
+        )
+        X_test_s, y_test_s, _, _, _ = scale_data(
+            X_test_raw, y_test_nn, X_mean, X_std, y_mean
+        )
+        
+        for i, eta in enumerate(eta_vals):
+            # Create model
+            model = NeuralNetwork(
+                network_input_size=1,
+                layer_output_sizes=layer_sizes,
+                activations=activations,
+                loss=MSE(),
+                seed=seed,
+                lambda_reg=0.0,
+                reg_type=None,
+                weight_init='normal'
+            )
+            
+            # Select optimizer
+            if optimizer_type == 'adam':
+                optimizer = Adam(eta=eta)
+            elif optimizer_type == 'rmsprop':
+                optimizer = RMSprop(eta=eta)
+            else:  
+                optimizer = GD(eta=eta)
+            
+            # Train
+            train(
+                nn=model,
+                X_train=X_train_s,
+                y_train=y_train_s,
+                X_val=X_test_s,
+                y_val=y_test_s,
+                optimizer=optimizer,
+                epochs=epochs,
+                batch_size=batch_size if optimizer_type != 'gd' else len(X_train_s),
+                stochastic=(optimizer_type != 'gd'),
+                task='regression',
+                early_stopping=False,
+                patience=50,
+                verbose=False,
+                seed=seed
+            )
+            
+            # Evaluate
+            y_train_pred = inverse_scale_y(model.predict(X_train_s), y_mean)
+            y_test_pred = inverse_scale_y(model.predict(X_test_s), y_mean)
+            y_train_real = inverse_scale_y(y_train_s, y_mean)
+            y_test_real = inverse_scale_y(y_test_s, y_mean)
+            
+            train_mse_val = mse(y_train_real, y_train_pred)
+            test_mse_val = mse(y_test_real, y_test_pred)
+            
+            train_mse_matrix[i, j] = train_mse_val
+            test_mse_matrix[i, j] = test_mse_val
+    
+    # Find best combination
+    best_idx = np.unravel_index(np.argmin(test_mse_matrix), test_mse_matrix.shape)
+    best_eta_idx, best_N_idx = best_idx
+    best_eta = eta_vals[best_eta_idx]
+    best_N = N_list[best_N_idx]
+    
+    print(f"\n{'='*60}")
+    print(f"BEST COMBINATION:")
+    print(f"  N = {best_N}")
+    print(f"  η = {best_eta:.6f}")
+    print(f"  Test MSE = {test_mse_matrix[best_eta_idx, best_N_idx]:.6f}")
+    print(f"  Train MSE = {train_mse_matrix[best_eta_idx, best_N_idx]:.6f}")
+    print(f"{'='*60}\n")
+    
+    return test_mse_matrix, train_mse_matrix, best_eta, best_N
+
+
+
+
+
+
+
+
+
+
+def save_results_to_csv(results, activation_name, save_dir='results'):
+    """
+    Save complexity analysis results to CSV file.
+    
+    Parameters:
+    -----------
+    results : dict
+        Results dictionary organized by number of layers
+    activation_name : str
+        Name of activation function (used in filename)
+    save_dir : str
+        Directory to save results
+    
+    Returns:
+    --------
+    str : Path to saved file
+    """
+    # Create save directory if it doesn't exist
+    save_path = Path(save_dir)
+    save_path.mkdir(exist_ok=True)
+    
+    # Flatten results dictionary into list of records
+    records = []
+    for n_layers, layer_results in results.items():
+        for result in layer_results:
+            records.append(result)
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(records)
+    
+    # Sort by number of parameters for cleaner file
+    df = df.sort_values('n_params').reset_index(drop=True)
+    
+    # Save to CSV
+    filename = f"{activation_name.lower().replace(' ', '_')}_complexity_results.csv"
+    filepath = save_path / filename
+    df.to_csv(filepath, index=False)
+    
+    print(f"Results saved to: {filepath}")
+    return str(filepath)
+
+
+def load_results_from_csv(filepath):
+    """
+    Load complexity analysis results from CSV file.
+    
+    Parameters:
+    -----------
+    filepath : str
+        Path to CSV file
+    
+    Returns:
+    --------
+    dict : Results dictionary organized by number of layers
+    """
+    df = pd.read_csv(filepath)
+    
+    # Reconstruct nested dictionary structure
+    results = {}
+    for n_layers in sorted(df['n_layers'].unique()):
+        layer_data = df[df['n_layers'] == n_layers]
+        results[n_layers] = layer_data.to_dict('records')
+    
+    return results
+
+
+def save_all_results(all_results, save_dir='results'):
+    """
+    Save all activation results and create a metadata file.
+    
+    Parameters:
+    -----------
+    all_results : dict
+        Dictionary with activation names as keys, results as values
+    save_dir : str
+        Directory to save results
+    
+    Returns:
+    --------
+    dict : Mapping of activation names to saved file paths
+    """
+    saved_files = {}
+    
+    for activation_name, results in all_results.items():
+        filepath = save_results_to_csv(results, activation_name, save_dir)
+        saved_files[activation_name] = filepath
+    
+    # Save metadata
+    metadata = {
+        'activations': list(all_results.keys()),
+        'files': saved_files,
+        'total_architectures': sum(
+            sum(len(layer_results) for layer_results in results.values())
+            for results in all_results.values()
+        )
+    }
+    
+    metadata_path = Path(save_dir) / 'metadata.json'
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+    
+    print(f"\nMetadata saved to: {metadata_path}")
+    return saved_files
+
+
+def load_all_results(save_dir='results'):
+    """
+    Load all saved results using metadata file.
+    
+    Parameters:
+    -----------
+    save_dir : str
+        Directory containing saved results
+    
+    Returns:
+    --------
+    dict : All results organized by activation name
+    """
+    metadata_path = Path(save_dir) / 'metadata.json'
+    
+    if not metadata_path.exists():
+        raise FileNotFoundError(f"No metadata file found in {save_dir}")
+    
+    with open(metadata_path, 'r') as f:
+        metadata = json.load(f)
+    
+    all_results = {}
+    for activation_name, filepath in metadata['files'].items():
+        all_results[activation_name] = load_results_from_csv(filepath)
+    
+    print(f"Loaded {len(all_results)} activation function(s)")
+    return all_results
+
+
+def print_results_summary(results, activation_name):
+    """
+    Print a summary of loaded results.
+    
+    Parameters:
+    -----------
+    results : dict
+        Results dictionary
+    activation_name : str
+        Name of activation function
+    """
+    print(f"\n{'='*60}")
+    print(f"{activation_name} - Results Summary")
+    print(f"{'='*60}")
+    
+    for n_layers in sorted(results.keys()):
+        n_archs = len(results[n_layers])
+        params_range = [r['n_params'] for r in results[n_layers]]
+        print(f"{n_layers} layer(s): {n_archs} architectures, "
+              f"{min(params_range):,} - {max(params_range):,} params")
+    
+    # Find best
+    all_archs = [r for layer_results in results.values() for r in layer_results]
+    best = min(all_archs, key=lambda x: x['test_loss'])
+    
+    print(f"\nBest: {best['n_layers']} layers × {best['n_neurons']} neurons")
+    print(f"Test MSE: {best['test_loss']:.6f}")
