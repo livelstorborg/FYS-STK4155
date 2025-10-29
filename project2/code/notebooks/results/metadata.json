@@ -1,0 +1,13 @@
+{
+  "activations": [
+    "Sigmoid",
+    "ReLU",
+    "Leaky ReLU"
+  ],
+  "files": {
+    "Sigmoid": "results/sigmoid_complexity_results.csv",
+    "ReLU": "results/relu_complexity_results.csv",
+    "Leaky ReLU": "results/leaky_relu_complexity_results.csv"
+  },
+  "total_architectures": 174
+}

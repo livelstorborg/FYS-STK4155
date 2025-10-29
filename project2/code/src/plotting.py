@@ -4,7 +4,7 @@ import seaborn as sns
 import os
 from matplotlib.patches import Rectangle
 
-# Match Project 1 style
+
 plt.rcParams.update({
     "font.size": 16,
     "axes.labelsize": 16,
@@ -16,8 +16,8 @@ plt.rcParams.update({
 
 os.makedirs("figs", exist_ok=True)
 
-
-def plot_learning_curves(train_loss, val_loss, epochs=None):
+# b)
+def plot_learning_curves(train_loss, val_loss, epochs=None, title='Learning Curves'):
     """
     Simple learning curve plot.
     
@@ -33,17 +33,20 @@ def plot_learning_curves(train_loss, val_loss, epochs=None):
     if epochs is None:
         epochs = range(1, len(train_loss) + 1)
     
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(10, 8))
     plt.plot(epochs, train_loss, label='Train')
     plt.plot(epochs, val_loss, label='Validation')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
+    plt.xlabel('Epochs', fontsize=16)
+    plt.ylabel('Loss', fontsize=16)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.legend(fontsize=16)
     plt.grid(True, alpha=0.3)
+    plt.title(title, fontsize=16, fontweight='bold')
     plt.show()
 
 
-# For exercise e)
+# e)
 def lambda_eta_heatmap(metric_array, eta_vals, lambda_vals, 
                        metric_name='MSE', dataset='Train',
                        cmap='viridis', figsize=(10, 8), annot=True,
@@ -85,105 +88,185 @@ def lambda_eta_heatmap(metric_array, eta_vals, lambda_vals,
     return fig, ax
 
 
-# ========================================
-# PART A) 
-# ========================================
-
-def plot_activations():
-    """Plot activation functions and derivatives for Part a)."""
-    from .activations import Sigmoid, ReLU, LeakyReLU
+# b)
+def N_eta_heatmap(metric_array, N_vals, eta_vals,
+                  metric_name='MSE', dataset='Test',
+                  cmap='viridis', figsize=(10, 8), annot=False, title='MSE'):
+    """
+    Create a heatmap showing MSE for different N and eta combinations.
     
-    z = np.linspace(-5, 5, 100)
-    sigmoid = Sigmoid()
-    relu = ReLU()
-    leaky = LeakyReLU(alpha=0.01)
+    Parameters:
+    -----------
+    metric_array : 2D array (n_etas x n_Ns)
+        MSE values to plot
+    N_vals : array
+        Sample sizes
+    eta_vals : array
+        Learning rates
+    metric_name : str
+        Name of metric for colorbar
+    dataset : str
+        'Test' or 'Train' for title
+    cmap : str
+        Colormap name
+    figsize : tuple
+        Figure size
+    annot : bool
+        Whether to annotate cells
     
-    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+    Returns:
+    --------
+    fig, ax : matplotlib figure and axes
+    """
+    fig, ax = plt.subplots(figsize=figsize)
     
-    # Sigmoid
-    axes[0, 0].plot(z, sigmoid.forward(z), linewidth=2, color='darkviolet')
-    axes[0, 0].set_title('Sigmoid')
-    axes[0, 0].grid(True, alpha=0.3)
+    # Create heatmap with grid lines
+    im = sns.heatmap(
+        metric_array,
+        annot=annot,
+        fmt='.4f' if annot else None,
+        cmap=cmap,
+        ax=ax,
+        xticklabels=[f'{N}' for N in N_vals],
+        yticklabels=[f'{eta:.1e}' for eta in eta_vals],
+        cbar_kws={'label': metric_name},
+        linewidths=0.2,
+        linecolor=(1, 1, 1, 0.2)
+    )
     
-    axes[1, 0].plot(z, sigmoid.backward(z), linewidth=2, color='#D63290')
-    axes[1, 0].set_title("Sigmoid'")
-    axes[1, 0].grid(True, alpha=0.3)
+    # Modify colorbar tick label size
+    cbar = im.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=12)
     
-    # ReLU
-    axes[0, 1].plot(z, relu.forward(z), linewidth=2, color='darkviolet')
-    axes[0, 1].set_title('ReLU')
-    axes[0, 1].grid(True, alpha=0.3)
+    # Find best value location (minimum for MSE)
+    best_idx = np.unravel_index(np.argmin(metric_array), metric_array.shape)
+    i_best, j_best = best_idx
     
-    axes[1, 1].plot(z, relu.backward(z), linewidth=2, color='#D63290')
-    axes[1, 1].set_title("ReLU'")
-    axes[1, 1].grid(True, alpha=0.3)
+    # Add red box around best cell
+    rect = Rectangle((j_best, i_best), 1, 1, 
+                     facecolor='none', edgecolor='red', linewidth=2)
+    ax.add_patch(rect)
     
-    # Leaky ReLU
-    axes[0, 2].plot(z, leaky.forward(z), linewidth=2, color='darkviolet')
-    axes[0, 2].set_title('Leaky ReLU')
-    axes[0, 2].grid(True, alpha=0.3)
+    # Set title and labels with enhanced formatting
+    ax.set_title(f'{dataset} {metric_name} ({title})', fontsize=18, fontweight='bold')
+    ax.set_xlabel('Sample Size (N)', fontsize=16)
+    ax.set_ylabel(r'Learning Rate ($\eta$)', fontsize=16)
     
-    axes[1, 2].plot(z, leaky.backward(z), linewidth=2, color='#D63290')
-    axes[1, 2].set_title("Leaky ReLU'")
-    axes[1, 2].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig('figs/activations.pdf', dpi=300, bbox_inches='tight')
-    plt.show()
-
-
-# ========================================
-# PART B) 
-# ========================================
-
-def plot_predictions(X_test, y_test, y_pred, title='NN Predictions'):
-    """Plot NN predictions vs true values."""
-    plt.figure(figsize=(10, 6))
-    
-    # True function
-    x_smooth = np.linspace(-1, 1, 200)
-    y_smooth = 1 / (1 + 25 * x_smooth**2)
-    plt.plot(x_smooth, y_smooth, 'r-', linewidth=2, label='True function')
-    
-    # Predictions (sorted for smooth line)
-    sort_idx = np.argsort(X_test.ravel())
-    plt.plot(X_test[sort_idx], y_pred[sort_idx], linewidth=2.5, 
-             color='darkviolet', label='NN predictions')
-    
-    # Test data
-    plt.scatter(X_test, y_test, alpha=0.6, s=50, color='#F2B44D',
-                edgecolors='black', linewidths=0.5, label='Test data')
-    
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title(title)
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_training_history(history):
-    """Plot training curves."""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
-    
-    # Loss
-    ax1.plot(history['train_loss'], linewidth=2, color='darkviolet', label='Train')
-    ax1.plot(history['val_loss'], linewidth=2, color='#D63290', label='Val')
-    ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Loss')
-    ax1.set_title('Loss')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
-    
-    # MSE
-    ax2.plot(history['train_metric'], linewidth=2, color='darkviolet', label='Train')
-    ax2.plot(history['val_metric'], linewidth=2, color='#D63290', label='Val')
-    ax2.set_xlabel('Epoch')
-    ax2.set_ylabel('MSE')
-    ax2.set_title('MSE')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
+    # Set tick parameters
+    ax.tick_params(axis='x', rotation=0, labelsize=16)
+    ax.tick_params(axis='y', rotation=0, labelsize=16)
     
     plt.tight_layout()
-    plt.show()
+    
+    return fig, ax
+
+# d)
+def plot_complexity_curve(results, activation_name):
+    """
+    Plot train/test loss vs number of parameters for different depths (number of layers).
+    
+    Parameters:
+    -----------
+    results : dict
+        Results from analyze_activation()
+    activation_name : str
+        Name of the activation function
+    
+    Returns:
+    --------
+    fig, ax : matplotlib figure and axes
+    """
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Colors for different depths
+    colors = {1: 'blue', 2: 'green', 3: 'red', 4: 'orange', 5: 'purple'}
+    markers = {1: 'o', 2: 's', 3: '^', 4: 'D', 5: 'v'}
+    
+    for n_layers in sorted(results.keys()):
+        layer_results = results[n_layers]
+        
+        # Extract data
+        n_params = [r['n_params'] for r in layer_results]
+        train_losses = [r['train_loss'] for r in layer_results]
+        test_losses = [r['test_loss'] for r in layer_results]
+        
+        # Convert to thousands
+        n_params_k = [p / 1000 for p in n_params]
+        
+        # Plot train and test
+        ax.plot(n_params_k, train_losses, 
+                color=colors.get(n_layers, 'black'), 
+                marker=markers.get(n_layers, 'o'),
+                label=f'{n_layers} layer(s) - Train')
+        
+        ax.plot(n_params_k, test_losses,
+                color=colors.get(n_layers, 'black'), 
+                marker=markers.get(n_layers, 'o'),
+                label=f'{n_layers} layer(s) - Test')
+    
+    ax.set_xlabel('Number of Parameters (×10³)', fontsize=16)
+    ax.set_ylabel('MSE', fontsize=16)
+    ax.set_title(f'{activation_name} - Model Complexity vs Performance', 
+                 fontsize=18, fontweight='bold')
+    ax.legend(fontsize=16, loc='best')
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(axis='both', labelsize=16)
+    
+    plt.tight_layout()
+    
+    return fig, ax
+
+# d)
+def plot_combined_complexity_curve(results, activation_name):
+    """
+    Plotting train/test loss vs number of parameters, combining all depths.
+    
+    Parameters:
+    -----------
+    results : dict
+        Results from analyze_activation()
+    activation_name : str
+        Name of the activation function
+    
+    Returns:
+    --------
+    fig, ax : matplotlib figure and axes
+    """
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Collect ALL results across all depths
+    all_results = []
+    for n_layers in sorted(results.keys()):
+        all_results.extend(results[n_layers])
+    
+    # Sort by number of parameters
+    all_results.sort(key=lambda x: x['n_params'])
+    
+    # Extract data
+    n_params = [r['n_params'] for r in all_results]
+    train_losses = [r['train_loss'] for r in all_results]
+    test_losses = [r['test_loss'] for r in all_results]
+    
+    # Convert to thousands
+    n_params_k = [p / 1000 for p in n_params]
+    
+    # Plot (style similar to reference image)
+    ax.plot(n_params_k, test_losses, 
+            marker='o', markersize=8, linewidth=2,
+            label='Test')
+    
+    ax.plot(n_params_k, train_losses, 
+            marker='o', markersize=8, linewidth=2,
+            label='Train')
+
+    ax.set_xlabel('Number of parameters/weights (×10³)', fontsize=16)
+    ax.set_ylabel('Squared loss', fontsize=16)
+    ax.set_title(f'{activation_name} Activation - Model Complexity Analysis', 
+                 fontsize=18, fontweight='bold')
+    ax.legend(fontsize=16, loc='upper right')
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(axis='both', labelsize=16)
+    
+    plt.tight_layout()
+    
+    return fig, ax
