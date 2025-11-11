@@ -1,4 +1,4 @@
-# Project 2: 
+# Project 2: Comparison of Feed Forward Neural Networks with Classical Polynomial Regression Methods
 
 ## Authors
 - Live L. Storborg
@@ -7,26 +7,36 @@
 - Henrik Haug
 
 ## Description
-
+In this project we comapre feed forward neural networks with different hyperparameters, architectures, optimizers and regularization with classical linear regression methods. We analyze the best combinations of the neural network architecture and measure them against how the classical polynomial linear regression approaches perform. We also analyze the performance of the neural networks on the MNIST dataset, to see how well it performs in picture classification.
 
 ## Project Structure
 
 ```
-project1/
-├── code/
-│   ├── src/                # Core modules
-│   │   ├── __init__.py     # Makes src callable as a package
-│   │   ├── class.py        # Class
-│   │   ├── plotting.py     # Visualization utilities
-│   │   └── utils.py        # Helper functions for class and main files
-│   ├── main.py             # Part x
-│   ├── results.ipynb       # Notebook for reproducing all results
-│   └── Makefile            # Makefile for cleaning generated figures and figs/ folder
-├── pyproject.toml          # Project dependencies
-├── uv.lock                 # Locked dependency versions
-├── .python-version         # Python version specification
-├── README.md               # This file
-└── Project2.pdf            # Report
+├── project2
+│   ├── code
+│   │   ├── notebooks
+│   │   │   ├── figs
+│   │   │   ├── Makefile
+│   │   │   └── results.ipynb
+│   │   └── src
+│   │       ├── __init__.py
+│   │       ├── activations.py
+│   │       ├── losses.py
+│   │       ├── metrics.py
+│   │       ├── neural_network.py
+│   │       ├── optimizers.py
+│   │       ├── plotting.py
+│   │       ├── training.py
+│   │       ├── utils_b.py
+│   │       ├── utils_d.py
+│   │       ├── utils_e.py
+│   │       ├── utils_f.py
+│   │       └── utils.py
+│   ├── pyproject.toml
+│   ├── README.md
+│   └── uv.lock
+└── README.md
+├── report.pdf
 
 ```
 
@@ -89,7 +99,7 @@ additionally, you can run each cell in the notebook individually to generate fig
 
 ## Output
 
-All generated figures are saved in a folder `figs/`, that is generated automatically when running the scripts or the notebook.
+All generated figures are saved in a folder `figs/`, that is generated automatically when running the cells in the notebook.
 
 
 ## Dependencies
