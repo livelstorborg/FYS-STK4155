@@ -7,7 +7,7 @@
 - Henrik Haug
 
 ## Description
-In this project we comapre feed forward neural networks with different hyperparameters, architectures, optimizers and regularization with classical linear regression methods. We analyze the best combinations of the neural network architecture and measure them against how the classical polynomial linear regression approaches perform. We also analyze the performance of the neural networks on the MNIST dataset, to see how well it performs in picture classification.
+In this project we compare feed forward neural networks with different hyperparameters, architectures, optimizers and regularization with classical linear regression methods. We analyze the best combinations of the neural network architecture and measure them against how the classical polynomial linear regression approaches perform. We also analyze the performance of the neural networks on the MNIST dataset, to see how well it performs in picture classification.
 
 ## Project Structure
 
