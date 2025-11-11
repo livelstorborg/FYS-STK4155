@@ -207,3 +207,6 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,macos
+
+# Large data files project 2
+project2/code/notebooks/results/part_d/results_combined_*.csv
