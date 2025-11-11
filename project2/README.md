@@ -93,9 +93,36 @@ additionally, you can run each cell in the notebook individually to generate fig
 
 ## Key Features
 
-- **Part x**:
-- **Part y**:
-- **Part z**:
+- **Part a**: Analytical warm-up  
+  - Define the cost/loss functions (MSE, binary cross-entropy, multiclass cross-entropy) and derive their gradients. :contentReference[oaicite:0]{index=0}  
+  - Define the activation functions (Sigmoid, ReLU, Leaky ReLU) and their derivatives. :contentReference[oaicite:1]{index=1}
+
+- **Part b**: Writing your own Neural Network code  
+  - Implement a feed-forward neural network (FFNN) for regression using the 1D Runge function \(f(x) = 1/(1+25x^2)\). :contentReference[oaicite:2]{index=2}  
+  - Use MSE as cost, Sigmoid activation in hidden layers, flexible number of hidden layers/nodes, random weight initialization (normal distribution). :contentReference[oaicite:3]{index=3}  
+  - Compare your results with OLS regression from Project 1 and explore architecture/learning-rate effects. :contentReference[oaicite:4]{index=4}
+
+- **Part c**: Testing against other software libraries  
+  - Benchmark your FFNN implementation against existing libraries (e.g., Scikit‑Learn, TensorFlow/Keras, PyTorch). :contentReference[oaicite:9]{index=9}  
+  - Optionally test gradient correctness via automatic differentiation (e.g., via JAX or Autograd). :contentReference[oaicite:12]{index=12}
+
+- **Part d**: Testing different activation functions and depths of the neural network  
+  - Experiment with hidden-layer activation functions (Sigmoid, ReLU, Leaky ReLU). :contentReference[oaicite:13]{index=13}  
+  - Vary the number of hidden layers and nodes, and assess signs of overfitting. :contentReference[oaicite:14]{index=14}
+
+- **Part e**: Testing different norms  
+  - Introduce regularization (L1 and L2 norms) in the cost function for the regression part (1D Runge function). :contentReference[oaicite:15]{index=15}  
+  - Compare results with Ridge (L2) and Lasso (L1) regression from Project 1. :contentReference[oaicite:16]{index=16}
+
+- **Part f**: Classification analysis using neural networks  
+  - Adapt your FFNN to perform multi-class classification, e.g., on the full MNIST dataset (or another dataset). :contentReference[oaicite:18]{index=18}  
+  - Use Softmax cross-entropy cost for classification. :contentReference[oaicite:19]{index=19}  
+  - Explore hyperparameters (learning rate, regularization, network architecture, activation functions) and compare with logistic regression if time permits. :contentReference[oaicite:20]{index=20}
+
+- **Part g**: Critical evaluation of the various algorithms  
+  - Summarize and critically evaluate the methods you implemented: which algorithm works best for regression vs classification? What are the advantages/disadvantages? :contentReference[oaicite:21]{index=21}  
+  - Discuss the impact of architecture choices, activation functions, regularization, gradient methods, etc. :contentReference[oaicite:22]{index=22}
+
 
 ## Output
 
@@ -126,5 +153,5 @@ uv add --dev <package-name> # Adds to dev dependencies
 
 ## Course Information
 
-**Course**: FYSSTK3155/FYS4155 - Applied Data Analysis and Machine Learning  
+**Course**: FYS-STK3155/FYS-STK4155 - Applied Data Analysis and Machine Learning  
 **Institution**: University of Oslo  
