@@ -63,6 +63,7 @@ class MSE(Loss):
         return -(2.0 / n_samples) * (y_true - y_pred)
 
 
+
 class CrossEntropy(Loss):
     """
     Cross-Entropy loss for classification.
