@@ -75,10 +75,11 @@ class Softmax(Activation):
 class BatchNorm(Activation):
     """
     Batch Normalization layer.
-    
+
     Normalizes inputs across the batch dimension and applies learnable
     scale (gamma) and shift (beta) parameters.
     """
+
     def __init__(self, num_features, momentum=0.9, epsilon=1e-5):
         """
         Args:
@@ -89,28 +90,32 @@ class BatchNorm(Activation):
         self.num_features = num_features
         self.momentum = momentum
         self.epsilon = epsilon
-        
+
         # Learnable parameters
         self.gamma = np.ones(num_features)
         self.beta = np.zeros(num_features)
-        
+
         # Running statistics for inference
         self.running_mean = np.zeros(num_features)
         self.running_var = np.ones(num_features)
-        
+
         # Training mode flag
         self.training = True
-        
+
         # Cache for backward pass
         self.cache = None
-    
+
+        # Gradient buffers (populated during backward)
+        self.dgamma = None
+        self.dbeta = None
+
     def forward(self, z):
         """
         Forward pass with different behavior for training vs inference.
-        
+
         Args:
             z: Input of shape (batch_size, num_features)
-        
+
         Returns:
             Normalized and scaled output
         """
@@ -118,40 +123,71 @@ class BatchNorm(Activation):
             # Training: use batch statistics
             batch_mean = np.mean(z, axis=0)
             batch_var = np.var(z, axis=0)
-            
+
             # Normalize
             z_normalized = (z - batch_mean) / np.sqrt(batch_var + self.epsilon)
-            
+
             # Update running statistics
-            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean
-            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * batch_var
-            
+            self.running_mean = (
+                self.momentum * self.running_mean + (1 - self.momentum) * batch_mean
+            )
+            self.running_var = (
+                self.momentum * self.running_var + (1 - self.momentum) * batch_var
+            )
+
             # Cache for backward
             self.cache = (z, z_normalized, batch_mean, batch_var)
         else:
             # Inference: use running statistics
-            z_normalized = (z - self.running_mean) / np.sqrt(self.running_var + self.epsilon)
-        
+            z_normalized = (z - self.running_mean) / np.sqrt(
+                self.running_var + self.epsilon
+            )
+
         # Scale and shift
         out = self.gamma * z_normalized + self.beta
         return out
-    
-    def backward(self, z):
+
+    def backward(self, dout):
         """
-        Backward pass for batch normalization.
-        
-        Note: This returns the derivative w.r.t. the normalized input.
-        The full backward pass also needs to compute gradients for gamma and beta.
-        
+        Full backward pass for batch normalization.
+
+        Computes gradients for gamma, beta, and the input.
+
         Args:
-            z: Input from forward pass (not used, kept for API compatibility)
-        
+            dout: Gradient from next layer, shape (batch_size, num_features)
+
         Returns:
-            Derivative of batch norm w.r.t. input
+            dx: Gradient w.r.t. input, shape (batch_size, num_features)
         """
         if self.cache is None:
             raise RuntimeError("Must call forward() before backward()")
-        
-        # This is simplified - full implementation would compute gradients for gamma, beta
-        # For now, return gamma (scale factor) for compatibility with existing backward API
-        return np.ones_like(z) * self.gamma.reshape(1, -1)
+
+        x, x_norm, batch_mean, batch_var = self.cache
+        m = x.shape[0]  # batch size
+
+        # Gradients for learnable parameters
+        self.dgamma = np.sum(dout * x_norm, axis=0)
+        self.dbeta = np.sum(dout, axis=0)
+
+        # Gradient w.r.t. normalized input
+        dx_norm = dout * self.gamma
+
+        # Gradient w.r.t. variance
+        dvar = np.sum(
+            dx_norm
+            * (x - batch_mean)
+            * -0.5
+            * np.power(batch_var + self.epsilon, -1.5),
+            axis=0,
+        )
+
+        # Gradient w.r.t. mean
+        dmean = np.sum(dx_norm * -1.0 / np.sqrt(batch_var + self.epsilon), axis=0)
+        dmean += dvar * np.sum(-2.0 * (x - batch_mean), axis=0) / m
+
+        # Gradient w.r.t. input
+        dx = dx_norm / np.sqrt(batch_var + self.epsilon)
+        dx += dvar * 2.0 * (x - batch_mean) / m
+        dx += dmean / m
+
+        return dx

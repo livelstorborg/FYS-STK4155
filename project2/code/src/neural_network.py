@@ -334,16 +334,26 @@ class NeuralNetwork:
     
     def predict(self, inputs):
         """Simple feed forward pass."""
-        a = inputs
-        for idx, ((W, b), activation) in enumerate(zip(self.layers, self.activations)):
-            z = a @ W.T + b
-            
-            # Apply batch normalization if enabled (only for hidden layers)
-            if self.use_batch_norm and idx < len(self.batch_norm_layers):
-                z = self.batch_norm_layers[idx].forward(z)
-            
-            a = activation.forward(z)
-        return a
+        restore_training = False
+        if self.use_batch_norm:
+            # During inference, use running stats
+            restore_training = any(getattr(bn, "training", True) for bn in self.batch_norm_layers)
+            if restore_training:
+                self.set_training_mode(False)
+        try:
+            a = inputs
+            for idx, ((W, b), activation) in enumerate(zip(self.layers, self.activations)):
+                z = a @ W.T + b
+
+                # Apply batch normalization if enabled (only for hidden layers)
+                if self.use_batch_norm and idx < len(self.batch_norm_layers):
+                    z = self.batch_norm_layers[idx].forward(z)
+
+                a = activation.forward(z)
+            return a
+        finally:
+            if self.use_batch_norm and restore_training:
+                self.set_training_mode(True)
     
     def _feed_forward_saver(self, inputs):
         """Feed forward that saves values for backprop."""
@@ -368,6 +378,7 @@ class NeuralNetwork:
         """Compute gradients using backpropagation with optional regularization."""
         layer_inputs, zs, predict = self._feed_forward_saver(inputs)
         layer_grads = [() for _ in self.layers]
+        bn_grads = [None] * (len(self.batch_norm_layers)) if self.use_batch_norm else None
         
         # Start with output layer error (from loss function)
         delta = self.loss.backward(targets, predict)
@@ -395,13 +406,17 @@ class NeuralNetwork:
                 # Propagate through weights
                 delta = delta @ W
                 
+                # Propagate through activation derivative of previous layer
+                delta = delta * self.activations[i-1].backward(zs[i-1])
+                
                 # Propagate through batch norm if enabled
                 if self.use_batch_norm and (i - 1) < len(self.batch_norm_layers):
-                    delta = delta * self.batch_norm_layers[i - 1].backward(zs[i - 1])
-                
-                # Apply activation derivative of previous layer
-                delta = delta * self.activations[i-1].backward(zs[i-1])
+                    bn_layer = self.batch_norm_layers[i - 1]
+                    delta = bn_layer.backward(delta)
+                    bn_grads[i - 1] = (bn_layer.dgamma, bn_layer.dbeta)
         
+        if self.use_batch_norm:
+            return layer_grads, bn_grads
         return layer_grads
     
     def compute_regularization_loss(self):

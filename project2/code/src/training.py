@@ -2,6 +2,8 @@
 import numpy as np
 from .metrics import mse, accuracy
 
+DEAD_NEURON_THRESHOLD = 1e-10
+
 def detect_overfitting_trend(train_losses, val_losses, window=10):
     """
     Check if validation loss is consistently increasing while training decreases.
@@ -93,11 +95,54 @@ def check_convergence(epoch, history, tol_relative=1e-6, tol_absolute=1e-10,
     return False, False, None
 
 
-def train(nn, X_train, y_train, X_val, y_val, optimizer,
-          epochs=100, batch_size=32, stochastic=True, task='regression', 
-          tol_relative=1e-6, tol_absolute=1e-10, early_stopping=True,
-          patience=50, min_delta=1e-5, check_overfitting_trend=True,  # ← CHANGED
-          verbose=True, seed=None, check_gradient_frequency=10):
+def _compute_per_layer_stats(layer_grads, bn_grads=None):
+    """Return per-layer (mean, std, dead fraction) gradient stats."""
+    layer_means = []
+    layer_stds = []
+    layer_dead = []
+    for idx, (dW, db) in enumerate(layer_grads):
+        neuron_sq = np.sum(dW**2, axis=1) + db**2
+        if bn_grads is not None and idx < len(bn_grads):
+            grads = bn_grads[idx]
+            if grads:
+                dgamma, dbeta = grads
+                neuron_sq += dgamma**2 + dbeta**2
+        neuron_norms = np.sqrt(np.maximum(neuron_sq, 1e-30))
+        layer_means.append(float(np.mean(neuron_norms)))
+        layer_stds.append(float(np.std(neuron_norms)))
+        layer_dead.append(float(np.mean(neuron_norms < DEAD_NEURON_THRESHOLD)))
+    return layer_means, layer_stds, layer_dead
+
+
+def _unpack_gradients(gradient_output):
+    """Support both legacy (layer_grads) and new (layer_grads, bn_grads) returns."""
+    if isinstance(gradient_output, tuple) and len(gradient_output) == 2:
+        return gradient_output
+    return gradient_output, None
+
+
+def train(
+    nn,
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+    optimizer,
+    epochs=100,
+    batch_size=32,
+    stochastic=True,
+    task="regression",
+    tol_relative=1e-6,
+    tol_absolute=1e-10,
+    early_stopping=True,
+    patience=50,
+    min_delta=1e-5,
+    check_overfitting_trend=True,  # ← CHANGED
+    verbose=True,
+    seed=None,
+    check_gradient_frequency=10,
+    track_per_layer_gradients=False,
+):
     """
     Training function supporting both full-batch GD and mini-batch SGD.
     Works with any optimizer from optimizers.py (GD, RMSprop, Adam).
@@ -132,18 +177,22 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
     
     # Pre-allocate arrays for performance (5-10% speedup)
     history = {
-        'train_loss': np.full(epochs, np.nan),
-        'val_loss': np.full(epochs, np.nan),
-        'train_metric': np.full(epochs, np.nan),
-        'val_metric': np.full(epochs, np.nan),
-        'gradient_norms': [],  # Keep as list - variable length
-        'converged': False,
-        'diverged': False,
-        'failed': False,
-        'failure_reason': None,
-        'final_epoch': epochs - 1,
-        'convergence_message': None
+        "train_loss": np.full(epochs, np.nan),
+        "val_loss": np.full(epochs, np.nan),
+        "train_metric": np.full(epochs, np.nan),
+        "val_metric": np.full(epochs, np.nan),
+        "gradient_norms": [],  # Keep as list - variable length
+        "converged": False,
+        "diverged": False,
+        "failed": False,
+        "failure_reason": None,
+        "final_epoch": epochs - 1,
+        "convergence_message": None,
     }
+    if track_per_layer_gradients:
+        history["per_layer_gradient_norms"] = []
+        history["per_layer_gradient_stds"] = []
+        history["per_layer_dead_fraction"] = []
     
     # Early stopping tracking
     best_val_loss = float('inf')
@@ -154,6 +203,10 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
     for epoch in range(epochs):
         epoch_loss = 0
         batch_count = 0
+        epoch_grad_norms = []
+        epoch_layer_means = [] if track_per_layer_gradients else None
+        epoch_layer_stds = [] if track_per_layer_gradients else None
+        epoch_layer_dead = [] if track_per_layer_gradients else None
         
         if stochastic:
             # Mini-batch SGD
@@ -171,7 +224,8 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
                 y_batch = y_shuffled[start:end]
                 
                 # Compute gradients
-                layer_grads = nn.compute_gradient(X_batch, y_batch)
+                grad_output = nn.compute_gradient(X_batch, y_batch)
+                layer_grads, bn_grads = _unpack_gradients(grad_output)
                 
                 # DEFENSE 1: Check gradient health (periodic)
                 if nn.check_gradients and batch_count % check_gradient_frequency == 0:
@@ -199,12 +253,23 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
                 
                 # DEFENSE 2: Gradient clipping (always applied)
                 layer_grads, grad_norm = nn.clip_gradients(layer_grads)
+                if grad_norm is not None:
+                    epoch_grad_norms.append(grad_norm)
                 
-                if grad_norm is not None and batch_count == 0:
-                    history['gradient_norms'].append(grad_norm)
-                
+                if track_per_layer_gradients:
+                    means, stds, dead = _compute_per_layer_stats(layer_grads, bn_grads)
+                    epoch_layer_means.append(means)
+                    epoch_layer_stds.append(stds)
+                    epoch_layer_dead.append(dead)
+
                 # Update parameters
-                optimizer.update(nn, layer_grads)
+                optimizer.update(
+                    nn,
+                    layer_grads,
+                    bn_grads
+                    if getattr(optimizer, "update_batch_norm_params", False)
+                    else None,
+                )
                 
                 # Track batch loss (including regularization)
                 batch_pred = nn.predict(X_batch)
@@ -231,7 +296,8 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
         
         else:
             # Full-batch GD
-            layer_grads = nn.compute_gradient(X_train, y_train)
+            grad_output = nn.compute_gradient(X_train, y_train)
+            layer_grads, bn_grads = _unpack_gradients(grad_output)
             
             # Check gradient health
             if nn.check_gradients:
@@ -253,9 +319,20 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
             # Gradient clipping
             layer_grads, grad_norm = nn.clip_gradients(layer_grads)
             if grad_norm is not None:
-                history['gradient_norms'].append(grad_norm)
+                epoch_grad_norms.append(grad_norm)
+            if track_per_layer_gradients:
+                means, stds, dead = _compute_per_layer_stats(layer_grads, bn_grads)
+                epoch_layer_means.append(means)
+                epoch_layer_stds.append(stds)
+                epoch_layer_dead.append(dead)
             
-            optimizer.update(nn, layer_grads)
+            optimizer.update(
+                nn,
+                layer_grads,
+                bn_grads
+                if getattr(optimizer, "update_batch_norm_params", False)
+                else None,
+            )
             
             train_pred = nn.predict(X_train)
             avg_train_loss = nn.loss.forward(y_train, train_pred)
@@ -286,10 +363,22 @@ def train(nn, X_train, y_train, X_val, y_val, optimizer,
         val_metric = metric_fn(y_val, val_pred)
         
         # Save history (using indexing instead of append for performance)
-        history['train_loss'][epoch] = avg_train_loss
-        history['val_loss'][epoch] = val_loss
-        history['train_metric'][epoch] = train_metric
-        history['val_metric'][epoch] = val_metric
+        history["train_loss"][epoch] = avg_train_loss
+        history["val_loss"][epoch] = val_loss
+        history["train_metric"][epoch] = train_metric
+        history["val_metric"][epoch] = val_metric
+        if epoch_grad_norms:
+            history["gradient_norms"].append(float(np.mean(epoch_grad_norms)))
+        if track_per_layer_gradients and epoch_layer_means:
+            history["per_layer_gradient_norms"].append(
+                np.mean(epoch_layer_means, axis=0).tolist()
+            )
+            history["per_layer_gradient_stds"].append(
+                np.mean(epoch_layer_stds, axis=0).tolist()
+            )
+            history["per_layer_dead_fraction"].append(
+                np.mean(epoch_layer_dead, axis=0).tolist()
+            )
         
         # Print progress
         if verbose and (epoch % 10 == 0 or epoch == epochs - 1):
