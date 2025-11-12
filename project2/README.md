@@ -75,15 +75,6 @@ In this project we compare feed forward neural networks with different hyperpara
 
 ## Usage
 
-### Running Individual Analysis Scripts
-
-```bash
-# Part x: 
-uv run code/main.py
-```
-
-
-
 ### Running the Jupyter Notebook
 
 To reproduce all results and generate all figures in one place:
