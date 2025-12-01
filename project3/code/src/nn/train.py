@@ -7,17 +7,25 @@ from .losses import loss_fn
 from .model import MLP
 
 
-def sample_points(N_int=512, N_bc=64, N_ic=64, T=0.5):
-    key = jax.random.PRNGKey(0)
-    k1, k2, k3 = jax.random.split(key, 3)
-
+def sample_points(
+    key,
+    N_int: int = 512,
+    N_bc: int = 64,
+    N_ic: int = 64,
+    T: float = 0.5,
+):
+    k1, k2, k3, k4 = jax.random.split(key, 4)
     x_int = jax.random.uniform(k1, (N_int, 1), minval=0.0, maxval=1.0)
-    t_int = jax.random.uniform(k1, (N_int, 1), minval=0.0, maxval=T)
+    t_int = jax.random.uniform(k2, (N_int, 1), minval=0.0, maxval=T)
 
-    x_bc = jnp.vstack([jnp.zeros((N_bc, 1)), jnp.ones((N_bc, 1))])
-    t_bc = jax.random.uniform(k2, (2 * N_bc, 1), minval=0.0, maxval=T)
-
-    x_ic = jax.random.uniform(k3, (N_ic, 1), minval=0.0, maxval=1.0)
+    x_bc = jnp.vstack(
+        [
+            jnp.zeros((N_bc, 1)),
+            jnp.ones((N_bc, 1)),
+        ]
+    )
+    t_bc = jax.random.uniform(k3, (2 * N_bc, 1), minval=0.0, maxval=T)
+    x_ic = jax.random.uniform(k4, (N_ic, 1), minval=0.0, maxval=1.0)
     t_ic = jnp.zeros((N_ic, 1))
     u_ic = jnp.sin(jnp.pi * x_ic)
 
@@ -26,20 +34,24 @@ def sample_points(N_int=512, N_bc=64, N_ic=64, T=0.5):
 
 def train_pinn(
     layers=[2, 64, 64, 1],
-    steps=5000,
-    T=0.5,
-    lambda_ic=10.0,
-    lambda_bc=10.0,
-    lr=1e-3,
+    steps: int = 5000,
+    T: float = 0.5,
+    lambda_ic: float = 10.0,
+    lambda_bc: float = 10.0,
+    lr: float = 1e-3,
+    seed: int = 0,
 ):
-    model = MLP(layers, key=jax.random.PRNGKey(0))
+    main_key = jax.random.PRNGKey(seed)
+    key_model, key_data = jax.random.split(main_key)
+
+    model = MLP(layers, key=key_model)
     opt = nnx.Optimizer(model, optax.adam(lr), wrt=nnx.Param)
 
-    x_int, t_int, x_bc, t_bc, x_ic, t_ic, u_ic = sample_points(T=T)
+    x_int, t_int, x_bc, t_bc, x_ic, t_ic, u_ic = sample_points(key_data, T=T)
     losses = []
 
-    def L(m):
-        return loss_fn(
+    L = nnx.jit(
+        lambda m: loss_fn(
             m,
             x_int,
             t_int,
@@ -51,6 +63,7 @@ def train_pinn(
             lambda_ic=lambda_ic,
             lambda_bc=lambda_bc,
         )
+    )
 
     for _ in range(steps):
         loss, grads = nnx.value_and_grad(L)(model)
