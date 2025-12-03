@@ -69,3 +69,25 @@ def compare_nn_and_exact(model, Nx=200, Nt=100, T=0.5):
     plt.show()
 
     return X, Tt, u_pred_flat, u_true, error
+
+
+def compute_error_metrics(model, Nx=100, Nt=100, T=0.5):
+    x = jnp.linspace(0.0, 1.0, Nx)
+    t = jnp.linspace(0.0, T, Nt)
+    X, Tt = jnp.meshgrid(x, t)
+
+    xt = jnp.stack([X.ravel(), Tt.ravel()], axis=1)
+
+    u_pred = model(xt).reshape(Nt, Nx)
+    u_true = u_exact(x, t)
+
+    error = u_pred - u_true
+    abs_error = jnp.abs(error)
+
+    num = jnp.sqrt(jnp.mean(error**2))
+    den = jnp.sqrt(jnp.mean(u_true**2))
+    L2_rel = num / den
+
+    Linf = jnp.max(abs_error)
+
+    return float(L2_rel), float(Linf)

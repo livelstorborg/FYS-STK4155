@@ -34,17 +34,23 @@ def sample_points(
 
 def train_pinn(
     layers=[2, 64, 64, 1],
-    steps: int = 5000,
-    T: float = 0.5,
-    lambda_ic: float = 10.0,
-    lambda_bc: float = 10.0,
-    lr: float = 1e-3,
-    seed: int = 0,
+    activations=None,
+    steps=5000,
+    T=0.5,
+    lambda_ic=10.0,
+    lambda_bc=10.0,
+    lr=1e-3,
+    seed=0,
 ):
+    if activations is None:
+        activations = [jax.nn.tanh] * (len(layers) - 2)
+
     main_key = jax.random.PRNGKey(seed)
     key_model, key_data = jax.random.split(main_key)
 
-    model = MLP(layers, key=key_model)
+    model = MLP(layers, activations, key=key_model)
+
+    model = MLP(layers=layers, activations=activations, key=jax.random.PRNGKey(0))
     opt = nnx.Optimizer(model, optax.adam(lr), wrt=nnx.Param)
 
     x_int, t_int, x_bc, t_bc, x_ic, t_ic, u_ic = sample_points(key_data, T=T)
