@@ -7,7 +7,7 @@ from src.fd_scheme import fd_solve
 from src.plotting import plot_solution
 
 
-# Part b test
+# ---------- Part b test ----------
 def test_explicit_scheme(Nx=100, T=0.5, alpha=0.4, t1=0.07, t2=0.30):
     u_num, x, t = fd_solve(Nx=Nx, T=T, alpha=alpha)
 
@@ -16,23 +16,34 @@ def test_explicit_scheme(Nx=100, T=0.5, alpha=0.4, t1=0.07, t2=0.30):
 
     u_true = u_exact(x, t)
 
-    plot_solution(x, u_num[i1], u_true[i1], title=f"t ≈ {float(t[i1]):.3f}")
-    plot_solution(x, u_num[i2], u_true[i2], title=f"t ≈ {float(t[i2]):.3f}")
+    plot_solution(
+        x,
+        u_num[i1],
+        u_true[i1],
+        title=rf"$t_1$ $\approx$ {float(t[i1]):.3f}, $\Delta$x = {1 / Nx:.2f}",
+    )
+    plot_solution(
+        x,
+        u_num[i2],
+        u_true[i2],
+        title=rf"$t_2$ $\approx$ {float(t[i2]):.3f}, $\Delta$x = {1 / Nx:.2f}",
+    )
 
 
-def compare_nn_and_exact(model, Nx=200, Nt=100, T=0.5):
-    x = jnp.linspace(0, 1, Nx)
-    t = jnp.linspace(0, T, Nt)
+# ---------- Part c ----------
+def compare_nn_and_exact(model, Nx=200, Nt=100, T=1.0, return_only=False):
+    x = jnp.linspace(0, 1, Nx + 1)
+    t = jnp.linspace(0, T, Nt + 1)
+
     X, Tt = jnp.meshgrid(x, t)
 
     xt = jnp.stack([X.ravel(), Tt.ravel()], axis=1)
-
-    u_pred_flat = model(xt).reshape(Nt, Nx)
+    u_pred_flat = model(xt).reshape(Nt + 1, Nx + 1)
     u_true = u_exact(x, t)
-
     error = jnp.abs(u_pred_flat - u_true)
 
-    # ------- PLOTTING -------
+    if return_only:
+        return u_pred_flat, u_true, x, t
 
     plt.figure(figsize=(7, 5))
     plt.imshow(u_pred_flat, extent=[0, 1, 0, T], origin="lower", aspect="auto")
@@ -72,13 +83,13 @@ def compare_nn_and_exact(model, Nx=200, Nt=100, T=0.5):
 
 
 def compute_error_metrics(model, Nx=100, Nt=100, T=0.5):
-    x = jnp.linspace(0.0, 1.0, Nx)
-    t = jnp.linspace(0.0, T, Nt)
+    x = jnp.linspace(0.0, 1.0, Nx + 1)
+    t = jnp.linspace(0.0, T, Nt + 1)
     X, Tt = jnp.meshgrid(x, t)
 
     xt = jnp.stack([X.ravel(), Tt.ravel()], axis=1)
 
-    u_pred = model(xt).reshape(Nt, Nx)
+    u_pred = model(xt).reshape(Nt + 1, Nx + 1)
     u_true = u_exact(x, t)
 
     error = u_pred - u_true

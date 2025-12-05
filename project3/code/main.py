@@ -1,3 +1,4 @@
+import jax.numpy as jnp
 import jax.nn as jnn
 from src.fd_scheme import fd_solve
 from src.analytical import u_exact
@@ -13,21 +14,53 @@ if __name__ == "__main__":
     # test_explicit_scheme(Nx=10, T=0.5, alpha=0.4, t1=0.07, t2=0.3)
     # test_explicit_scheme(Nx=100, T=0.5, alpha=0.4, t1=0.07, t2=0.3)
 
-    # ---------- Part c ----------
     Nx = 100
     T = 0.5
-    u_num, x, t = fd_solve(Nx=Nx, T=T, alpha=0.4)
+
+    _, x, t = fd_solve(Nx=Nx, T=T, alpha=0.4)
     u_true = u_exact(x, t)
-    plot_solution(x, u_num[-1], u_true[-1], title="t=0.5")
 
-    model, losses = train_pinn(layers=[2, 32, 32, 1], steps=5000)
+    t1, t2 = 0.07, 0.30
+    i1 = jnp.argmin(jnp.abs(t - t1))
+    i2 = jnp.argmin(jnp.abs(t - t2))
+
+    model, losses = train_pinn(
+        layers=[2, 128, 128, 128, 128, 1],
+        steps=1000,
+        N_int=1000,
+        N_ic=200,
+        lambda_ic=1.0,
+        lambda_bc=1.0,
+        lr=1e-3,
+        nu=1.0,
+    )
+
+    # Ensure the PINN evaluation uses the same temporal grid as the FD solver
+    # so that time indices (i1, i2) align between `u_true` and `u_pinn`.
+    u_pinn, _, _, _ = compare_nn_and_exact(
+        model, Nx=Nx, Nt=len(t) - 1, T=T, return_only=True
+    )
+
+    plot_solution(
+        x,
+        u_pinn[i1],
+        u_true[i1],
+        title=rf"PINN vs exact at t_1 \approx {float(t[i1]):.3f}",
+    )
+
+    plot_solution(
+        x,
+        u_pinn[i2],
+        u_true[i2],
+        title=rf"PINN vs exact at t_2 \approx {float(t[i2]):.3f}",
+    )
+
     compare_nn_and_exact(model, Nx=Nx, T=T)
 
-    model, losses = train_pinn(layers=[2, 32, 32, 1], steps=5000)
     plot_training_loss(losses)
-    compare_nn_and_exact(model, Nx=Nx, T=T)
 
-# ---------- Experiment model architecutre ----------
+
+# # ---------- Experiment model architecutre ----------
 
 # results = run_architecture_sweep(
 #     hidden_widths=[16, 32, 64],

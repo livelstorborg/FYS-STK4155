@@ -43,7 +43,6 @@ def plot_heatmap_width_depth(df, activation):
     widths = sorted(data["width"].unique())
     depths = sorted(data["hidden_layers"].unique())
 
-    # Matrix for heatmap: rows=depth, cols=width
     M = np.zeros((len(depths), len(widths)))
 
     for _, row in data.iterrows():

@@ -1,28 +1,22 @@
 import jax
 import jax.numpy as jnp
-from flax import nnx
+import flax.nnx as nnx
 
 
-@nnx.jit
-def pde_residual(model, x, t):
-    xt = jnp.hstack([x, t])
-
-    def u_scalar(z):
+def pde_residual(model, xt, nu):
+    def u_single(z):
         return model(z[None, :])[0, 0]
 
-    def dudt(z):
-        return jax.grad(u_scalar, argnums=0)(z)[1]
+    jac = jax.vmap(jax.grad(u_single))(xt)
+    u_x = jac[:, 0]
+    u_t = jac[:, 1]
 
-    def d2udx2(z):
-        def dudx(zz):
-            return jax.grad(u_scalar, argnums=0)(zz)[0]
+    def u_x_single(z):
+        return jax.grad(u_single)(z)[0]
 
-        return jax.grad(dudx)(z)[0]
+    u_xx = jax.vmap(jax.grad(u_x_single))(xt)[:, 0]
 
-    u_t = jax.vmap(dudt)(xt)
-    u_xx = jax.vmap(d2udx2)(xt)
-
-    return (u_t - u_xx) ** 2
+    return (u_t - nu * u_xx) ** 2
 
 
 def loss_fn(
@@ -34,15 +28,19 @@ def loss_fn(
     x_ic,
     t_ic,
     y_ic,
-    lambda_ic: float = 1.0,
-    lambda_bc: float = 1.0,
+    lambda_ic: float = 500.0,
+    lambda_bc: float = 200.0,
+    nu: float = 1.0,
 ):
-    loss_pde = pde_residual(model, x_int, t_int).mean()
+    xt_int = jnp.concatenate([x_int, t_int], axis=1)
+    loss_pde = pde_residual(model, xt_int, nu).mean()
 
-    u_bc = model(jnp.hstack([x_bc, t_bc]))
-    loss_bc = (u_bc**2).mean()
+    xt_bc = jnp.concatenate([x_bc, t_bc], axis=1)
+    u_bc = model(xt_bc)
+    loss_bc = jnp.mean(u_bc**2)
 
-    u_ic_pred = model(jnp.hstack([x_ic, t_ic]))
-    loss_ic = ((u_ic_pred - y_ic) ** 2).mean()
+    xt_ic = jnp.concatenate([x_ic, t_ic], axis=1)
+    u_ic_pred = model(xt_ic)
+    loss_ic = jnp.mean((u_ic_pred - y_ic) ** 2)
 
     return loss_pde + lambda_ic * loss_ic + lambda_bc * loss_bc
