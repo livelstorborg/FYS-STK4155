@@ -19,6 +19,7 @@ def pde_residual(model, xt, nu):
     return (u_t - nu * u_xx) ** 2
 
 
+# ============ KEEP ORIGINAL (for soft BC) ============
 def loss_fn(
     model,
     x_int,
@@ -44,3 +45,14 @@ def loss_fn(
     loss_ic = jnp.mean((u_ic_pred - y_ic) ** 2)
 
     return loss_pde + lambda_ic * loss_ic + lambda_bc * loss_bc
+
+
+# ============ ADD THIS NEW FUNCTION (for hard BC) ============
+def loss_fn_hard(model, x_int, t_int, nu: float = 1.0):
+    """
+    Loss for hard BC: only PDE residual needed!
+    BCs and IC are automatically satisfied.
+    """
+    xt_int = jnp.concatenate([x_int, t_int], axis=1)
+    loss_pde = pde_residual(model, xt_int, nu).mean()
+    return loss_pde

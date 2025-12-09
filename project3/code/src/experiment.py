@@ -15,10 +15,13 @@ def run_architecture_sweep(
     *,
     T=0.5,
     steps=5000,
+    N_int=1000,
+    N_bc=64,
+    N_ic=256,
     lr=1e-3,
     seeds=(0,),
-    lambda_ic=10.0,
-    lambda_bc=10.0,
+    lambda_ic=1.0,
+    lambda_bc=1.0,
     Nx_eval=100,
     Nt_eval=100,
 ):
@@ -50,11 +53,13 @@ def run_architecture_sweep(
                         layers=layers,
                         activations=activations,
                         steps=steps,
+                        N_int=N_int,
+                        N_bc=N_bc,
+                        N_ic=N_ic,
                         T=T,
                         lr=lr,
                         seed=seed,
-                        lambda_ic=lambda_ic,
-                        lambda_bc=lambda_bc,
+                        use_hard_bc=True,
                     )
 
                     L2, Linf = compute_error_metrics(
