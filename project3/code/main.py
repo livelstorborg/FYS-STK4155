@@ -63,28 +63,28 @@ if __name__ == "__main__":
 
 # ---------- Experiment model architecutre (Part d)----------
 
-results = run_architecture_sweep(
-    hidden_widths=[32, 64, 128],
-    num_hidden_layers=[2, 3, 4],
-    activation_fns={
-        'tanh': jnn.tanh,
-        'sin': jnp.sin,
-        'GeLU': jnn.gelu,
-        'swish': jnn.swish,
-        'ReLU': jnn.relu,
-    },
-    T=0.5,
-    steps=10000,
-    N_int=1000,
-    N_bc=500,
-    N_ic=200,
-    lr=5e-4,
-    seeds=(4, 2, 16, 8, 29, 3, 21, 9, 0, 42),
-    save_to_csv=False,
-    use_pre_computed=True,
-    data_dir="data",
-)
+# results = run_architecture_sweep(
+#     hidden_widths=[32, 64, 128],
+#     num_hidden_layers=[2, 3, 4],
+#     activation_fns={
+#         'tanh': jnn.tanh,
+#         'sin': jnp.sin,
+#         'GeLU': jnn.gelu,
+#         'swish': jnn.swish,
+#         'ReLU': jnn.relu,
+#     },
+#     T=0.5,
+#     steps=10000,
+#     N_int=1000,
+#     N_bc=500,
+#     N_ic=200,
+#     lr=5e-4,
+#     seeds=(4, 2, 16, 8, 29, 3, 21, 9, 0, 42),
+#     save_to_csv=False,
+#     use_pre_computed=True,
+#     data_dir="data",
+# )
 
-print(results)
+# print(results)
 
-plot_all_heatmaps(results)
+# plot_all_heatmaps(results)
