@@ -269,6 +269,9 @@ def plot_all_heatmaps(df, save_dir="figs", show=False):
         filepath = os.path.join(save_dir, filename)
 
         fig.savefig(filepath, dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        
+        # Only close if not showing
+        if not show:
+            plt.close(fig)
 
         print(f"Saved: {filepath}")
