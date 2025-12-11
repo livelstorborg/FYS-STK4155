@@ -88,3 +88,61 @@ if __name__ == "__main__":
 # print(results)
 
 # plot_all_heatmaps(results)
+
+import sys
+import os
+
+sys.path.append(os.path.abspath("../"))
+
+import jax.numpy as jnp
+import jax.nn as jnn
+import numpy as np
+from src.fd_scheme import fd_solve
+from src.analytical import u_exact
+from src.plotting import (
+    plot_solution,
+    plot_training_loss,
+    plot_all_heatmaps,
+    plot_scheme_errors_t1,
+    plot_scheme_errors_t2,
+    plot_3d_surface,
+    subplot_3d_surface,
+)
+from src.nn.model import MLP
+from src.nn.train import train_pinn
+from src.nn.evaluation import compare_nn_and_exact, test_explicit_scheme, evaluate_pinn
+from src.experiment import run_architecture_sweep
+
+u_fd, x, t = fd_solve(Nx=100, T=0.5, alpha=0.4)
+model, losses = train_pinn(
+    steps=5000, layers=[2, 32, 32, 32, 1], activations=[jnn.silu, jnn.silu, jnn.silu]
+)
+u_nn = evaluate_pinn(model, x, t)
+u_true = u_exact(x, t)
+
+
+error_nn = np.abs(u_nn - u_true)
+error_fd = np.abs(u_fd - u_true)
+
+rotations = [45, 135, 225, 315]
+
+pinn_surfaces = [error_nn for _ in rotations]
+fd_surfaces = [error_fd for _ in rotations]
+
+subplot_3d_surface(
+    x,
+    t,
+    pinn_surfaces,
+    elev=20,
+    azims=rotations,
+    save_path="code/figs/error_surface_pinn.pdf",
+)
+
+subplot_3d_surface(
+    x,
+    t,
+    fd_surfaces,
+    elev=20,
+    azims=rotations,
+    save_path="code/figs/error_surface_fd.pdf",
+)
