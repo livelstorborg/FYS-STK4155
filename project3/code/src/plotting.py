@@ -5,8 +5,7 @@ import numpy as np
 
 
 # part b)
-def plot_solution(x, u_num, u_true, title="", filepath="figs/plot.pdf"):
-    os.makedirs("figs", exist_ok=True)
+def plot_solution(x, u_num, u_true, title="", filepath="../figs/plot.pdf"):
     plt.plot(x, u_true, label="Analytical", color="red", linewidth=5, alpha=0.5)
     plt.plot(x, u_num, ":", label="Numerical", color="blue", linewidth=3)
     plt.grid(alpha=0.3)
@@ -27,13 +26,15 @@ def plot_scheme_errors_t1(error_list, title, filepath):
     for err in error_list:
         x = err["x"]
         dx = err["dx"]
-        plt.plot(x, err["t1_error"], label=rf"$\Delta x = {dx:.2f}$")
+        plt.plot(x, err["t1_error"], label=rf"$\Delta x = {dx:.2f}$", linewidth=2)
 
     plt.grid(alpha=0.3)
     plt.xlabel("x", fontsize=16)
     plt.ylabel(r"Error at $t_1=0.69$", fontsize=16)
     plt.title(title, fontsize=18, fontweight="bold")
     plt.legend(fontsize=14)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
     plt.tight_layout()
     plt.yscale("log")
     plt.savefig(filepath, dpi=300)
@@ -46,12 +47,14 @@ def plot_scheme_errors_t2(error_list, title, filepath):
     for err in error_list:
         x = err["x"]
         dx = err["dx"]
-        plt.plot(x, err["t2_error"], label=rf"$\Delta x = {dx:.2f}$")
+        plt.plot(x, err["t2_error"], label=rf"$\Delta x = {dx:.2f}$", linewidth=2)
 
     plt.grid(alpha=0.3)
     plt.xlabel("x", fontsize=16)
     plt.ylabel(r"Error at $t_2 = 0.298$", fontsize=16)
     plt.title(title, fontsize=18, fontweight="bold")
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
     plt.yscale("log")
     plt.legend(fontsize=14)
     plt.tight_layout()
@@ -254,13 +257,13 @@ def plot_error_vs_activation(df, width, depth):
 # ============================================================
 #  AUTOMATICALLY PLOT ALL HEATMAPS
 # ============================================================
-def plot_all_heatmaps(df, save_dir="figs"):
+def plot_all_heatmaps(df, save_dir="figs", show=False):
     os.makedirs(save_dir, exist_ok=True)
     activations = df["activation"].unique()
 
     for act in activations:
         print(f"Creating heatmap for activation: {act}")
-        fig = plot_heatmap_width_depth(df, activation=act, show=False)
+        fig = plot_heatmap_width_depth(df, activation=act, show=show)
 
         filename = f"heatmap_activation_{act}.pdf"
         filepath = os.path.join(save_dir, filename)

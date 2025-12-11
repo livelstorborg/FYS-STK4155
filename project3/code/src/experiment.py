@@ -149,7 +149,7 @@ def run_architecture_sweep(
     return results_df
 
 
-def load_sweep_results_from_csv(data_dir="data", activation_fns=None):
+def load_sweep_results_from_csv(data_dir="../data", activation_fns=None):
     """
     Load sweep results from CSV files in data_dir.
     

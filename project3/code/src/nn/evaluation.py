@@ -21,14 +21,14 @@ def test_explicit_scheme(Nx=100, T=0.5, alpha=0.4, t1=0.07, t2=0.30):
         u_num[i1],
         u_true[i1],
         title=rf"$\mathbf{{t_1 = {float(t[i1]):.3f}}}$, $\mathbf{{\Delta x = {1 / Nx:.2f}}}$",
-        filepath=f"figs/t1_dx{1 / Nx:.2f}.pdf",
+        filepath=f"../figs/t1_dx{1 / Nx:.2f}.pdf",
     )
     plot_solution(
         x,
         u_num[i2],
         u_true[i2],
         title=rf"$\mathbf{{t_2 = {float(t[i2]):.3f}}}$, $\mathbf{{\Delta x = {1 / Nx:.2f}}}$",
-        filepath=f"figs/t2_dx{1 / Nx:.2f}.pdf",
+        filepath=f"../figs/t2_dx{1 / Nx:.2f}.pdf",
     )
 
     return {
