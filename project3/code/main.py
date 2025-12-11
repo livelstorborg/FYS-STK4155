@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # ---------- Part b (test scheme with t1 and t2) ----------
     # test_explicit_scheme(Nx=10, T=0.5, alpha=0.4, t1=0.07, t2=0.3)
     # test_explicit_scheme(Nx=100, T=0.5, alpha=0.4, t1=0.07, t2=0.3)
-
+    """
     Nx = 100
     T = 0.5
 
@@ -58,23 +58,33 @@ if __name__ == "__main__":
     compare_nn_and_exact(model, Nx=Nx, T=T)
 
     plot_training_loss(losses)
+    """
 
 
-# # ---------- Experiment model architecutre ----------
+# ---------- Experiment model architecutre (Part d)----------
 
 # results = run_architecture_sweep(
-#     hidden_widths=[16, 32, 64],
-#     num_hidden_layers=[1, 2, 3],
+#     hidden_widths=[32, 64, 128],
+#     num_hidden_layers=[2, 3, 4],
 #     activation_fns={
-#         "tanh": jnn.tanh,
-#         "sigmoid": jnn.sigmoid,
-#         "relu": jnn.relu,
-#         "leaky_relu": jnn.leaky_relu,
+#         'tanh': jnn.tanh,
+#         'sin': jnp.sin,
+#         'GeLU': jnn.gelu,
+#         'swish': jnn.swish,
+#         'ReLU': jnn.relu,
 #     },
-#     steps=3000,
-#     seeds=(0,),
 #     T=0.5,
-#     Nx_eval=100,
-#     Nt_eval=100,
+#     steps=10000,
+#     N_int=1000,
+#     N_bc=500,
+#     N_ic=200,
+#     lr=5e-4,
+#     seeds=(4, 2, 16, 8, 29, 3, 21, 9, 0, 42),
+#     save_to_csv=False,
+#     use_pre_computed=True,
+#     data_dir="data",
 # )
+
+# print(results)
+
 # plot_all_heatmaps(results)
