@@ -3,19 +3,58 @@ import os
 import jax.numpy as jnp
 import numpy as np
 
-
+# part b)
 def plot_solution(x, u_num, u_true, title="", filepath="figs/plot.pdf"):
     os.makedirs("figs", exist_ok=True)
-    plt.plot(x, u_true, label="Analytical", color="red")
-    plt.plot(x, u_num, "--", label="Numerical", color="blue")
+    plt.plot(x, u_true, label="Analytical", color="red", linewidth=5, alpha=0.5)
+    plt.plot(x, u_num, ":", label="Numerical", color="blue", linewidth=3)
     plt.grid(alpha=0.3)
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     plt.xlabel("x", fontsize=16)
     plt.ylabel("u(x, t)", fontsize=16)
-    plt.title(title, fontsize=18)
-    plt.legend()
-    plt.savefig(filepath)
+    plt.title(title, fontsize=18, fontweight="bold")
+    plt.legend(fontsize=16)
+    plt.savefig(filepath, bbox_inches="tight", dpi=300)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_scheme_errors_t1(error_list, title, filepath):
+    plt.figure(figsize=(8, 5))
+
+    for err in error_list:
+        x = err["x"]
+        dx = err["dx"]
+        plt.plot(x, err["t1_error"], label=rf"$\Delta x = {dx:.2f}$")
+
+    plt.grid(alpha=0.3)
+    plt.xlabel("x", fontsize=16)
+    plt.ylabel("Error at $t_1$", fontsize=16)
+    plt.title(title, fontsize=18, fontweight="bold")
+    plt.legend(fontsize=14)
+    plt.tight_layout()
+    plt.yscale("log")
+    plt.savefig(filepath, dpi=300)
+    plt.show()
+
+
+def plot_scheme_errors_t2(error_list, title, filepath):
+    plt.figure(figsize=(8, 5))
+
+    for err in error_list:
+        x = err["x"]
+        dx = err["dx"]
+        plt.plot(x, err["t2_error"], label=rf"$\Delta x = {dx:.2f}$")
+
+    plt.grid(alpha=0.3)
+    plt.xlabel("x", fontsize=16)
+    plt.ylabel("Error at $t_2$", fontsize=16)
+    plt.title(title, fontsize=18, fontweight="bold")
+    plt.yscale("log")
+    plt.legend(fontsize=14)
+    plt.tight_layout()
+    plt.savefig(filepath, dpi=300)
     plt.show()
 
 
@@ -33,9 +72,7 @@ def plot_training_loss(losses):
     return losses_np
 
 
-# ============================================================
-#  HEATMAP: L2 error as a function of width × depth
-# ============================================================
+# part d) 
 def plot_heatmap_width_depth(df, activation, show=True):
     data = df[df["activation"] == activation]
 
@@ -56,14 +93,14 @@ def plot_heatmap_width_depth(df, activation, show=True):
     im = ax.imshow(M, cmap="viridis", origin="lower")
 
     ax.set_xticks(range(len(widths)))
-    ax.set_xticklabels(widths)
+    ax.set_xticklabels(widths, fontsize=16)  # Added fontsize
 
     ax.set_yticks(range(len(depths)))
-    ax.set_yticklabels(depths)
+    ax.set_yticklabels(depths, fontsize=16)  # Added fontsize
 
-    ax.set_xlabel("Width (nodes per hidden layer)", fontsize=16)
-    ax.set_ylabel("Depth (number of hidden layers)", fontsize=16)
-    ax.set_title(f"Relative $L^2$ Error ({activation})", fontsize=18)
+    ax.set_xlabel("Width", fontsize=16)
+    ax.set_ylabel("Depth", fontsize=16)
+    ax.set_title(rf"Relative $\mathbf{{L^2}}$ Error ({activation})", fontsize=18, fontweight="bold")
 
     # ----------------------------
     # Add numbers inside each cell
@@ -71,32 +108,38 @@ def plot_heatmap_width_depth(df, activation, show=True):
     for i in range(M.shape[0]):
         for j in range(M.shape[1]):
             ax.text(
-                j, i, f"{M[i, j]:.3f}",
+                j, i, f"{M[i, j]:.5f}",
                 ha="center", va="center",
-                color="white", fontsize=10, alpha=0.8
+                color="white", fontsize=12, alpha=1
             )
 
+    # --------------------
+    # Make grid lines faint (draw FIRST so rectangle is on top)
+    # --------------------
+    ax.set_xticks(np.arange(-0.5, len(widths), 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, len(depths), 1), minor=True)
+    ax.grid(which="minor", color=(1, 1, 1, 0.3), linewidth=0.3)
+    ax.grid(which="major", alpha=0)  # hide old major grid
+
     # -----------------------------------
-    # Draw red rectangle around min value
+    # Draw red rectangle around min value (with high zorder to be on top)
     # -----------------------------------
     min_row, min_col = np.unravel_index(np.argmin(M), M.shape)
     rect = plt.Rectangle(
         (min_col - 0.5, min_row - 0.5), 1, 1,
-        facecolor="none", edgecolor="red", linewidth=2
+        facecolor="none", edgecolor="red", linewidth=3, zorder=10
     )
     ax.add_patch(rect)
 
-    # --------------------
-    # Make grid lines faint
-    # --------------------
-    ax.set_xticks(np.arange(-0.5, len(widths), 1), minor=True)
-    ax.set_yticks(np.arange(-0.5, len(depths), 1), minor=True)
-    ax.grid(which="minor", color=(1, 1, 1, 0.3), linewidth=0.7)
-    ax.grid(which="major", alpha=0)  # hide old major grid
-
     cbar = fig.colorbar(im, ax=ax, label=r"$L^2$ error")
     cbar.ax.tick_params(labelsize=16)
-    cbar.set_label(r"$L^2$ error", fontsize=18)
+    cbar.set_label(r"$L^2$ error", fontsize=16)
+    
+    # ----------------------------
+    # Format colorbar in scientific notation
+    # ----------------------------
+    cbar.formatter.set_powerlimits((0, 0))  # Force scientific notation
+    cbar.update_ticks()
 
     fig.tight_layout()
 
@@ -106,6 +149,7 @@ def plot_heatmap_width_depth(df, activation, show=True):
     return fig
 
 
+# dont know
 # ============================================================
 #  LINE PLOT: Error vs width (for a chosen activation)
 # ============================================================
