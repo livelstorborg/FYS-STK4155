@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import os
 import jax.numpy as jnp
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
 
 
 # part b)
@@ -30,14 +31,14 @@ def plot_scheme_errors_t1(error_list, title, filepath):
 
     plt.grid(alpha=0.3)
     plt.xlabel("x", fontsize=16)
-    plt.ylabel(r"Error at $t_1=0.69$", fontsize=16)
+    plt.ylabel("Error", fontsize=16)
     plt.title(title, fontsize=18, fontweight="bold")
-    plt.legend(fontsize=14)
+    plt.legend(fontsize=16)
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     plt.tight_layout()
     plt.yscale("log")
-    plt.savefig(filepath, dpi=300)
+    plt.savefig(filepath, bbox_inches="tight", dpi=300)
     plt.show()
 
 
@@ -51,14 +52,124 @@ def plot_scheme_errors_t2(error_list, title, filepath):
 
     plt.grid(alpha=0.3)
     plt.xlabel("x", fontsize=16)
-    plt.ylabel(r"Error at $t_2 = 0.298$", fontsize=16)
+    plt.ylabel("Error", fontsize=16)
     plt.title(title, fontsize=18, fontweight="bold")
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     plt.yscale("log")
-    plt.legend(fontsize=14)
+    plt.legend(fontsize=16)
     plt.tight_layout()
-    plt.savefig(filepath, dpi=300)
+    plt.savefig(filepath, bbox_inches="tight", dpi=300)
+    plt.show()
+
+
+def plot_3d_surface(x, t, U, title="", elev=30, azim=-135):
+    fig = plt.figure(figsize=(10, 10), constrained_layout=True)
+    ax = fig.add_subplot(111, projection="3d")
+
+    X, T = np.meshgrid(x, t)
+    surf = ax.plot_surface(X, T, U, cmap="viridis", edgecolor="none")
+
+    # Labels
+    ax.set_xlabel("x", fontsize=16, labelpad=12)
+    ax.set_ylabel("t", fontsize=16, labelpad=12)
+    ax.set_zlabel("Error", fontsize=16, labelpad=12)
+    ax.set_title(title, fontsize=18, fontweight="bold", pad=5)
+
+    for label in ax.zaxis.get_ticklabels():
+        label.set_rotation(45)
+        label.set_fontsize(16)
+
+    ax.view_init(elev=elev, azim=azim)
+
+    # Tick font sizes
+    ax.tick_params(axis="both", which="major", labelsize=16)
+    ax.tick_params(axis="z", which="major", labelsize=16)
+
+    # Bigger colorbar
+    cbar = fig.colorbar(
+        surf,
+        ax=ax,
+        aspect=25,
+        shrink=0.75,
+    )
+    cbar.set_label("Error", fontsize=16, labelpad=10)
+    cbar.ax.tick_params(labelsize=16)
+    cbar.formatter.set_powerlimits((0, 0))
+    cbar.update_ticks()
+
+    return fig
+
+
+def subplot_3d_surface(
+    x, t, surfaces, elev=20, azims=None, save_path="code/figs/3d_subplot.pdf"
+):
+    """
+    Create a 1x4 row of 3D surface plots with a shared colorbar.
+    surfaces: list of 4 (Nt x Nx) matrices.
+    azims: list of 4 azimuths.
+    """
+    if azims is None:
+        azims = [0, 45, 90, 135]
+
+    fig, axes = plt.subplots(
+        1,
+        4,
+        figsize=(18, 5),
+        subplot_kw={"projection": "3d"},
+        gridspec_kw={"wspace": 0.1},
+    )
+
+    X, T = np.meshgrid(x, t)
+
+    for idx, (ax, U, az) in enumerate(zip(axes, surfaces, azims)):
+        surf = ax.plot_surface(X, T, U, cmap="viridis", edgecolor="none")
+        ax.view_init(elev=elev, azim=az)
+
+        # -------------------------
+        # 1. THIN X and T ticks (show every other)
+        # -------------------------
+        xticks = ax.get_xticks()
+        yticks = ax.get_yticks()
+
+        ax.set_xticks(xticks[::2])
+        ax.set_yticks(yticks[::2])
+
+        # -------------------------
+        # 2. LABELS
+        # -------------------------
+        ax.set_xlabel("x", fontsize=12)
+        ax.set_ylabel("t", fontsize=12)
+
+        # -------------------------
+        # 3. Z-axis (special handling)
+        # -------------------------
+        if idx == 0:
+            # First subplot: show z-ticks + numbers + rotate them
+            ax.set_zlabel("Error", fontsize=12, labelpad=8)
+            ax.tick_params(axis="z", labelsize=10)
+
+            # Rotate z-axis tick labels
+            for label in ax.get_zticklabels():
+                label.set_rotation(45)
+                label.set_fontsize(10)
+
+        else:
+            # Other subplots: keep ticks but remove numbers
+            ax.set_zticklabels([""] * len(ax.get_zticks()))
+
+        # -------------------------
+        # 4. Set tick sizes on x/t axis
+        # -------------------------
+        ax.tick_params(axis="x", labelsize=10)
+        ax.tick_params(axis="y", labelsize=10)
+
+    # Shared colorbar
+    cbar = fig.colorbar(surf, ax=axes.ravel().tolist(), shrink=0.5, aspect=20, pad=0.02)
+    cbar.set_label("Error", fontsize=12)
+    cbar.ax.tick_params(labelsize=10)
+
+    fig.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.show()
 
 

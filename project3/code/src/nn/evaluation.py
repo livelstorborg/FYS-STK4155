@@ -116,6 +116,25 @@ def compare_nn_and_exact(model, Nx=200, Nt=100, T=1.0, return_only=False):
     return X, Tt, u_pred, u_true, error
 
 
+def evaluate_pinn(model, x, t):
+    """
+    Evaluate trained PINN model on full spatio-temporal grid.
+    x: (Nx,) array
+    t: (Nt,) array
+    Returns u_nn of shape (Nt, Nx)
+    """
+    X, Tgrid = jnp.meshgrid(x, t)
+    xt = jnp.stack([X.flatten(), Tgrid.flatten()], axis=1)
+
+    # batch predict using vmap
+    @jax.vmap
+    def predict_single(z):
+        return model(z[jnp.newaxis, :])[0]
+
+    u_flat = predict_single(xt)
+    return u_flat.reshape(len(t), len(x))
+
+
 def compute_error_metrics(model, Nx=100, Nt=100, T=0.5):
     x = jnp.linspace(0.0, 1.0, Nx + 1)
     t = jnp.linspace(0.0, T, Nt + 1)
