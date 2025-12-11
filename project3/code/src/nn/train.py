@@ -57,10 +57,8 @@ def train_pinn(
     # Create model based on BC type
     if use_hard_bc:
         model = MLP_HardBC(layers, activations, key=key_model)
-        print("Using HARD boundary conditions (with JIT)")
     else:
         model = MLP(layers, activations, key=key_model)
-        print("Using SOFT boundary conditions (with JIT)")
     
     schedule = optax.exponential_decay(
         init_value=lr,
