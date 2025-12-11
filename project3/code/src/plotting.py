@@ -3,6 +3,7 @@ import os
 import jax.numpy as jnp
 import numpy as np
 
+
 # part b)
 def plot_solution(x, u_num, u_true, title="", filepath="figs/plot.pdf"):
     os.makedirs("figs", exist_ok=True)
@@ -30,7 +31,7 @@ def plot_scheme_errors_t1(error_list, title, filepath):
 
     plt.grid(alpha=0.3)
     plt.xlabel("x", fontsize=16)
-    plt.ylabel("Error at $t_1$", fontsize=16)
+    plt.ylabel(r"Error at $t_1=0.69$", fontsize=16)
     plt.title(title, fontsize=18, fontweight="bold")
     plt.legend(fontsize=14)
     plt.tight_layout()
@@ -49,7 +50,7 @@ def plot_scheme_errors_t2(error_list, title, filepath):
 
     plt.grid(alpha=0.3)
     plt.xlabel("x", fontsize=16)
-    plt.ylabel("Error at $t_2$", fontsize=16)
+    plt.ylabel(r"Error at $t_2 = 0.298$", fontsize=16)
     plt.title(title, fontsize=18, fontweight="bold")
     plt.yscale("log")
     plt.legend(fontsize=14)
@@ -72,7 +73,7 @@ def plot_training_loss(losses):
     return losses_np
 
 
-# part d) 
+# part d)
 def plot_heatmap_width_depth(df, activation, show=True):
     data = df[df["activation"] == activation]
 
@@ -100,7 +101,11 @@ def plot_heatmap_width_depth(df, activation, show=True):
 
     ax.set_xlabel("Width", fontsize=16)
     ax.set_ylabel("Depth", fontsize=16)
-    ax.set_title(rf"Relative $\mathbf{{L^2}}$ Error ({activation})", fontsize=18, fontweight="bold")
+    ax.set_title(
+        rf"Relative $\mathbf{{L^2}}$ Error ({activation})",
+        fontsize=18,
+        fontweight="bold",
+    )
 
     # ----------------------------
     # Add numbers inside each cell
@@ -108,9 +113,14 @@ def plot_heatmap_width_depth(df, activation, show=True):
     for i in range(M.shape[0]):
         for j in range(M.shape[1]):
             ax.text(
-                j, i, f"{M[i, j]:.5f}",
-                ha="center", va="center",
-                color="white", fontsize=12, alpha=1
+                j,
+                i,
+                f"{M[i, j]:.5f}",
+                ha="center",
+                va="center",
+                color="white",
+                fontsize=12,
+                alpha=1,
             )
 
     # --------------------
@@ -126,15 +136,20 @@ def plot_heatmap_width_depth(df, activation, show=True):
     # -----------------------------------
     min_row, min_col = np.unravel_index(np.argmin(M), M.shape)
     rect = plt.Rectangle(
-        (min_col - 0.5, min_row - 0.5), 1, 1,
-        facecolor="none", edgecolor="red", linewidth=3, zorder=10
+        (min_col - 0.5, min_row - 0.5),
+        1,
+        1,
+        facecolor="none",
+        edgecolor="red",
+        linewidth=3,
+        zorder=10,
     )
     ax.add_patch(rect)
 
     cbar = fig.colorbar(im, ax=ax, label=r"$L^2$ error")
     cbar.ax.tick_params(labelsize=16)
     cbar.set_label(r"$L^2$ error", fontsize=16)
-    
+
     # ----------------------------
     # Format colorbar in scientific notation
     # ----------------------------
