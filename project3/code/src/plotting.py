@@ -64,11 +64,11 @@ def plot_scheme_errors_t2(error_list, title, filepath):
 
 
 def plot_3d_surface(x, t, U, title="", elev=30, azim=-135):
-    fig = plt.figure(figsize=(10, 10), constrained_layout=True)
+    fig = plt.figure(figsize=(12, 10), constrained_layout=True)
     ax = fig.add_subplot(111, projection="3d")
 
     X, T = np.meshgrid(x, t)
-    surf = ax.plot_surface(X, T, U, cmap="viridis", edgecolor="none")
+    surf = ax.plot_surface(X, T, U, cmap="viridis", edgecolor="none", alpha=0.8)
 
     # Labels
     ax.set_xlabel("x", fontsize=16, labelpad=12)
@@ -102,7 +102,7 @@ def plot_3d_surface(x, t, U, title="", elev=30, azim=-135):
 
 
 def subplot_3d_surface(
-    x, t, surfaces, elev=20, azims=None, save_path="code/figs/3d_subplot.pdf"
+    x, t, surfaces, elev=20, azims=None, save_path="code/figs/3d_subplot.pdf", title="3d surface plots"
 ):
     """
     Create a 1x4 row of 3D surface plots with a shared colorbar.
@@ -115,7 +115,7 @@ def subplot_3d_surface(
     fig, axes = plt.subplots(
         1,
         4,
-        figsize=(18, 5),
+        figsize=(25, 6),
         subplot_kw={"projection": "3d"},
         gridspec_kw={"wspace": 0.1},
     )
@@ -123,17 +123,13 @@ def subplot_3d_surface(
     X, T = np.meshgrid(x, t)
 
     for idx, (ax, U, az) in enumerate(zip(axes, surfaces, azims)):
-        surf = ax.plot_surface(X, T, U, cmap="viridis", edgecolor="none")
+        surf = ax.plot_surface(X, T, U, cmap="viridis", edgecolor="none", alpha=0.9)
         ax.view_init(elev=elev, azim=az)
+        ax.grid(alpha=0.3)
 
-        # -------------------------
-        # 1. THIN X and T ticks (show every other)
-        # -------------------------
         xticks = ax.get_xticks()
         yticks = ax.get_yticks()
 
-        ax.set_xticks(xticks[::2])
-        ax.set_yticks(yticks[::2])
 
         # -------------------------
         # 2. LABELS
@@ -146,7 +142,6 @@ def subplot_3d_surface(
         # -------------------------
         if idx == 0:
             # First subplot: show z-ticks + numbers + rotate them
-            ax.set_zlabel("Error", fontsize=12, labelpad=8)
             ax.tick_params(axis="z", labelsize=10)
 
             # Rotate z-axis tick labels
@@ -169,7 +164,9 @@ def subplot_3d_surface(
     cbar.set_label("Error", fontsize=12)
     cbar.ax.tick_params(labelsize=10)
 
-    fig.savefig(save_path, dpi=300, bbox_inches="tight")
+    fig.suptitle(title, fontsize=22, fontweight="bold", y=0.85)
+    if save_path:
+        fig.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0.1)
     plt.show()
 
 
