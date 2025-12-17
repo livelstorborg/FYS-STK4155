@@ -57,9 +57,9 @@ def train_pinn(
     # Create model based on BC type
     if use_hard_bc:
         model = MLP_HardBC(layers, activations, key=key_model)
-    else:
-        model = MLP(layers, activations, key=key_model)
-    
+    # else:
+    #     model = MLP(layers, activations, key=key_model)
+
     schedule = optax.exponential_decay(
         init_value=lr,
         transition_steps=1000,
@@ -81,8 +81,17 @@ def train_pinn(
 
         def loss_func(m):
             return loss_fn(
-                m, x_int, t_int, x_bc, t_bc, x_ic, t_ic, y_ic,
-                lambda_ic=lambda_ic, lambda_bc=lambda_bc, nu=nu
+                m,
+                x_int,
+                t_int,
+                x_bc,
+                t_bc,
+                x_ic,
+                t_ic,
+                y_ic,
+                lambda_ic=lambda_ic,
+                lambda_bc=lambda_bc,
+                nu=nu,
             )
 
         loss, grads = nnx.value_and_grad(loss_func)(model)
@@ -93,9 +102,7 @@ def train_pinn(
     def train_step_hard(model, opt, key):
         """JIT-compiled step for hard BC"""
         key, subkey = jax.random.split(key)
-        x_int, t_int, _, _, _, _, _ = sample_points(
-            subkey, N_int, N_bc, N_ic, T, L
-        )
+        x_int, t_int, _, _, _, _, _ = sample_points(subkey, N_int, N_bc, N_ic, T, L)
 
         def loss_func(m):
             return loss_fn_hard(m, x_int, t_int, nu=nu)

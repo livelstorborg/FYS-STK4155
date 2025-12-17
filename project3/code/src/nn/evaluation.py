@@ -32,6 +32,8 @@ def test_explicit_scheme(Nx=100, T=0.5, alpha=0.4, t1=0.07, t2=0.30):
     )
 
     return {
+        "t1": t[i1],
+        "t2": t[i2],
         "dx": 1 / Nx,
         "x": x,
         "t1_error": u_true[i1] - u_num[i1],

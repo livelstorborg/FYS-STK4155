@@ -118,23 +118,75 @@ u_fd, x, t = fd_solve(Nx=100, T=0.5, alpha=0.4)
 
 u_true = u_exact(x, t)
 
-# SiLU 
+# SiLU Activation
 model_silu, losses_silu = train_pinn(
-    steps=5000, layers=[2, 32, 32, 32, 1], activations=[jnn.silu, jnn.silu, jnn.silu]
+    steps=10000,
+    layers=[2, 32, 32, 32, 1],
+    activations=[jnn.silu, jnn.silu, jnn.silu],
+    N_int=10000,
+    N_ic=1000,
+    N_bc=1000,
 )
 # Use coarser temporal grid for PINN evaluation (no stability constraint)
-t_pinn = jnp.linspace(0, 0.5, 101)
-u_nn_silu = evaluate_pinn(model_silu, x, t_pinn)
+# t_pinn = jnp.linspace(0, 0.5, 101)
+u_nn_silu = evaluate_pinn(model_silu, x, t)
+
+# Sinusoidal Activation
+model_sin, losses_sin = train_pinn(
+    steps=10000,
+    layers=[2, 32, 32, 32, 1],
+    activations=[jnp.sin, jnp.sin, jnp.sin],
+    N_int=10000,
+    N_ic=1000,
+    N_bc=1000,
+)
+u_nn_sin = evaluate_pinn(model_sin, x, t)
+
 
 # Error surfaces
 error_fd = np.abs(u_fd - u_true)
-u_true_pinn = u_exact(x, t_pinn)
+u_true_pinn = u_exact(x, t)
 error_nn_silu = np.abs(u_nn_silu - u_true_pinn)
+error_nn_sin = np.abs(u_nn_sin - u_true_pinn)
 
+
+# Plotting
 rotations = [45, 135, 225, 315]
 
 fd_surfaces = [error_fd for _ in rotations]
 pinn_surfaces_silu = [error_nn_silu for _ in rotations]
+
+
+# Surface plots of solutions
+plot_3d_surface(
+    x,
+    t,
+    u_fd,
+    elev=20,
+    azim=45,
+    save_path="figs/fd_solution.pdf",
+    title="Finite Difference Solution",
+)
+
+plot_3d_surface(
+    x,
+    t,
+    u_nn_silu,
+    elev=20,
+    azim=45,
+    save_path="figs/pinn_solution_silu.pdf",
+    title="PINN Solution (SiLU Activation)",
+)
+
+plot_3d_surface(
+    x,
+    t,
+    u_nn_sin,
+    elev=20,
+    azim=45,
+    save_path="figs/pinn_solution_sin.pdf",
+    title="PINN Solution (Sinusoidal Activation)",
+)
 
 subplot_3d_surface(
     x,
@@ -142,16 +194,26 @@ subplot_3d_surface(
     fd_surfaces,
     elev=20,
     azims=rotations,
-    save_path=None,
+    save_path="figs/fd_error_surfaces.pdf",
     title="Absolute Error of Finite Difference Scheme",
 )
 
 subplot_3d_surface(
     x,
-    t_pinn,
+    t,
     pinn_surfaces_silu,
     elev=20,
     azims=rotations,
-    save_path=None,
+    save_path="figs/pinn_error_surfaces_silu.pdf",
     title="Absolute Error of PINN Solution (SiLU)",
+)
+
+subplot_3d_surface(
+    x,
+    t,
+    [error_nn_sin for _ in rotations],
+    elev=20,
+    azims=rotations,
+    save_path="figs/pinn_error_surfaces_sin.pdf",
+    title="Absolute Error of PINN Solution (Sinusoidal)",
 )

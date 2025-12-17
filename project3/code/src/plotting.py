@@ -63,7 +63,7 @@ def plot_scheme_errors_t2(error_list, title, filepath):
     plt.show()
 
 
-def plot_3d_surface(x, t, U, title="", elev=30, azim=-135):
+def plot_3d_surface(x, t, U, title="", elev=30, azim=-135, save_path=None):
     fig = plt.figure(figsize=(12, 10), constrained_layout=True)
     ax = fig.add_subplot(111, projection="3d")
 
@@ -97,12 +97,20 @@ def plot_3d_surface(x, t, U, title="", elev=30, azim=-135):
     cbar.ax.tick_params(labelsize=16)
     cbar.formatter.set_powerlimits((0, 0))
     cbar.update_ticks()
+    if save_path:
+        fig.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.1)
 
     return fig
 
 
 def subplot_3d_surface(
-    x, t, surfaces, elev=20, azims=None, save_path="code/figs/3d_subplot.pdf", title="3d surface plots"
+    x,
+    t,
+    surfaces,
+    elev=20,
+    azims=None,
+    save_path="code/figs/3d_subplot.pdf",
+    title="3d surface plots",
 ):
     """
     Create a 1x4 row of 3D surface plots with a shared colorbar.
@@ -129,7 +137,6 @@ def subplot_3d_surface(
 
         xticks = ax.get_xticks()
         yticks = ax.get_yticks()
-
 
         # -------------------------
         # 2. LABELS
@@ -166,7 +173,7 @@ def subplot_3d_surface(
 
     fig.suptitle(title, fontsize=22, fontweight="bold", y=0.85)
     if save_path:
-        fig.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0.1)
+        fig.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.1)
     plt.show()
 
 

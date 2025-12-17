@@ -19,32 +19,32 @@ def pde_residual(model, xt, nu):
     return (u_t - nu * u_xx) ** 2
 
 
-# ============ KEEP ORIGINAL (for soft BC) ============
-def loss_fn(
-    model,
-    x_int,
-    t_int,
-    x_bc,
-    t_bc,
-    x_ic,
-    t_ic,
-    y_ic,
-    lambda_ic: float = 500.0,
-    lambda_bc: float = 200.0,
-    nu: float = 1.0,
-):
-    xt_int = jnp.concatenate([x_int, t_int], axis=1)
-    loss_pde = pde_residual(model, xt_int, nu).mean()
+# # ============ KEEP ORIGINAL (for soft BC) ============
+# def loss_fn(
+#     model,
+#     x_int,
+#     t_int,
+#     x_bc,
+#     t_bc,
+#     x_ic,
+#     t_ic,
+#     y_ic,
+#     lambda_ic: float = 500.0,
+#     lambda_bc: float = 200.0,
+#     nu: float = 1.0,
+# ):
+#     xt_int = jnp.concatenate([x_int, t_int], axis=1)
+#     loss_pde = pde_residual(model, xt_int, nu).mean()
 
-    xt_bc = jnp.concatenate([x_bc, t_bc], axis=1)
-    u_bc = model(xt_bc)
-    loss_bc = jnp.mean(u_bc**2)
+#     xt_bc = jnp.concatenate([x_bc, t_bc], axis=1)
+#     u_bc = model(xt_bc)
+#     loss_bc = jnp.mean(u_bc**2)
 
-    xt_ic = jnp.concatenate([x_ic, t_ic], axis=1)
-    u_ic_pred = model(xt_ic)
-    loss_ic = jnp.mean((u_ic_pred - y_ic) ** 2)
+#     xt_ic = jnp.concatenate([x_ic, t_ic], axis=1)
+#     u_ic_pred = model(xt_ic)
+#     loss_ic = jnp.mean((u_ic_pred - y_ic) ** 2)
 
-    return loss_pde + lambda_ic * loss_ic + lambda_bc * loss_bc
+#     return loss_pde + lambda_ic * loss_ic + lambda_bc * loss_bc
 
 
 # ============ ADD THIS NEW FUNCTION (for hard BC) ============
