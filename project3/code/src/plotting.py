@@ -5,7 +5,9 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
 
-# part b)
+# -----------------------------------------------------------------------------
+# Part b: finite-difference comparisons
+# -----------------------------------------------------------------------------
 def plot_solution(x, u_num, u_true, title="", filepath="../figs/plot.pdf"):
     plt.plot(x, u_true, label="Analytical", color="red", linewidth=5, alpha=0.5)
     plt.plot(x, u_num, ":", label="Numerical", color="blue", linewidth=3)
@@ -21,6 +23,9 @@ def plot_solution(x, u_num, u_true, title="", filepath="../figs/plot.pdf"):
     plt.show()
 
 
+# -----------------------------------------------------------------------------
+# Part b: FD scheme error curves
+# -----------------------------------------------------------------------------
 def plot_scheme_errors_t1(error_list, title, filepath):
     plt.figure(figsize=(8, 5))
 
@@ -42,6 +47,9 @@ def plot_scheme_errors_t1(error_list, title, filepath):
     plt.show()
 
 
+# -----------------------------------------------------------------------------
+# Part b: FD scheme error curves
+# -----------------------------------------------------------------------------
 def plot_scheme_errors_t2(error_list, title, filepath):
     plt.figure(figsize=(8, 5))
 
@@ -63,17 +71,20 @@ def plot_scheme_errors_t2(error_list, title, filepath):
     plt.show()
 
 
+# -----------------------------------------------------------------------------
+# Part c: 3D surfaces for solutions/errors
+# -----------------------------------------------------------------------------
 def plot_3d_surface(x, t, U, title="", elev=30, azim=-135, save_path=None):
     fig = plt.figure(figsize=(12, 10), constrained_layout=True)
     ax = fig.add_subplot(111, projection="3d")
 
     X, T = np.meshgrid(x, t)
-    surf = ax.plot_surface(X, T, U, cmap="viridis", edgecolor="none", alpha=0.8)
+    surf = ax.plot_surface(X, T, U, cmap="plasma", edgecolor="none", alpha=0.8)
 
     # Labels
     ax.set_xlabel("x", fontsize=16, labelpad=12)
     ax.set_ylabel("t", fontsize=16, labelpad=12)
-    ax.set_zlabel("Error", fontsize=16, labelpad=12)
+    ax.set_zlabel("u(x, t)", fontsize=16, labelpad=12)
     ax.set_title(title, fontsize=18, fontweight="bold", pad=5)
 
     for label in ax.zaxis.get_ticklabels():
@@ -93,7 +104,7 @@ def plot_3d_surface(x, t, U, title="", elev=30, azim=-135, save_path=None):
         aspect=25,
         shrink=0.75,
     )
-    cbar.set_label("Error", fontsize=16, labelpad=10)
+    cbar.set_label("u(x, t)", fontsize=16, labelpad=10)
     cbar.ax.tick_params(labelsize=16)
     cbar.formatter.set_powerlimits((0, 0))
     cbar.update_ticks()
@@ -191,7 +202,9 @@ def plot_training_loss(losses):
     return losses_np
 
 
-# part d)
+# -----------------------------------------------------------------------------
+# Part d: architecture sweep heatmaps
+# -----------------------------------------------------------------------------
 def plot_heatmap_width_depth(df, activation, show=True):
     data = df[df["activation"] == activation]
 
@@ -282,96 +295,9 @@ def plot_heatmap_width_depth(df, activation, show=True):
     return fig
 
 
-# dont know
-# ============================================================
-#  LINE PLOT: Error vs width (for a chosen activation)
-# ============================================================
-def plot_error_vs_width(df, activation, show=True):
-    data = df[df["activation"] == activation]
-    if data.empty:
-        raise ValueError(f"No entries found for activation '{activation}'.")
-
-    widths = sorted(data["width"].unique())
-    depths = sorted(data["hidden_layers"].unique())
-
-    fig, ax = plt.subplots(figsize=(7, 5))
-
-    for L in depths:
-        subset = data[data["hidden_layers"] == L].sort_values("width")
-        ax.plot(
-            subset["width"], subset["L2_rel_mean"], marker="o", label=f"{L} layer(s)"
-        )
-
-    ax.set_xlabel("Width (nodes per layer)")
-    ax.set_ylabel("Relative $L^2$ error")
-    ax.set_title(f"L2 Error vs Width (activation = {activation})")
-    ax.grid(alpha=0.3)
-    ax.legend()
-    fig.tight_layout()
-
-    if show:
-        plt.show()
-
-    return fig
-
-
-# ============================================================
-#  LINE PLOT: Error vs depth (for a chosen activation)
-# ============================================================
-def plot_error_vs_depth(df, activation, show=True):
-    data = df[df["activation"] == activation]
-    if data.empty:
-        raise ValueError(f"No entries found for activation '{activation}'.")
-
-    widths = sorted(data["width"].unique())
-
-    fig, ax = plt.subplots(figsize=(7, 5))
-
-    for W in widths:
-        subset = data[data["width"] == W].sort_values("hidden_layers")
-        ax.plot(
-            subset["hidden_layers"], subset["L2_rel_mean"], marker="o", label=f"W={W}"
-        )
-
-    ax.set_xlabel("Depth (hidden layers)")
-    ax.set_ylabel("Relative $L^2$ error")
-    ax.set_title(f"L2 Error vs Depth (activation = {activation})")
-    ax.grid(alpha=0.3)
-    ax.legend()
-    fig.tight_layout()
-
-    if show:
-        plt.show()
-
-    return fig
-
-
-# ============================================================
-#  BAR CHART: Activation function comparison
-# ============================================================
-def plot_error_vs_activation(df, width, depth):
-    """
-    Compare activation functions for a fixed architecture (width, depth).
-    """
-
-    subset = df[(df["width"] == width) & (df["hidden_layers"] == depth)]
-
-    if subset.empty:
-        raise ValueError(f"No results found for width={width}, depth={depth}.")
-
-    plt.figure(figsize=(6, 4))
-    plt.bar(subset["activation"], subset["L2_rel_mean"])
-    plt.xlabel("Activation function")
-    plt.ylabel("Relative $L^2$ error")
-    plt.title(f"Activation Comparison (width={width}, depth={depth})")
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    plt.show()
-
-
-# ============================================================
-#  AUTOMATICALLY PLOT ALL HEATMAPS
-# ============================================================
+# -----------------------------------------------------------------------------
+# Part d: run all heatmaps
+# -----------------------------------------------------------------------------
 def plot_all_heatmaps(df, save_dir="figs", show=False):
     os.makedirs(save_dir, exist_ok=True)
     activations = df["activation"].unique()
