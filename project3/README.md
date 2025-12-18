@@ -23,6 +23,7 @@ In this project we implement Physics-Informed Neural Networks (PINNs) with hard 
 │       ├── pde.py            # FD solver and analytical solution
 │       ├── pinn.py           # PINN model, loss, training, eval
 │       └── plotting.py       # plotting utilities
+├── FYS-STK4155_project3.pdf # project report
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
