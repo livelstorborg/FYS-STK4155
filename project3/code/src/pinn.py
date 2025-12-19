@@ -61,6 +61,7 @@ class MLP_HardBC(nnx.Module):
 
         # Apply hard BC: u = (1-t)*sin(πx) + t*x*(1-x)*N
         u = (1.0 - t) * jnp.sin(jnp.pi * x) + t * x * (1.0 - x) * N
+
         return u
 
 
